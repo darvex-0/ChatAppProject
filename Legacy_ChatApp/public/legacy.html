@@ -1,0 +1,3540 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ConnectHub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --primary-dark: #4f46e5;
+      --secondary: #f472b6;
+      --dark: #1e293b;
+      --darker: #0f172a;
+      --light: #f8fafc;
+      --gray: #94a3b8;
+      --success: #10b981;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+      color: var(--light);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header Styles */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.8);
+      padding: 1rem 1.5rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: white;
+      backdrop-filter: blur(10px);
+      position: relative;
+      z-index: 100;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: linear-gradient(to right, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-weight: 700;
+      font-size: 1.5rem;
+    }
+
+    .header-icons {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .icon-btn {
+      width: 2.5rem;
+      height: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: rgba(99, 102, 241, 0.1);
+      color: var(--primary-light);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(99, 102, 241, 0.2);
+    }
+
+    .icon-btn:hover {
+      background: rgba(99, 102, 241, 0.2);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .profile-pic {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .chat-item-details {
+      flex-grow: 1;
+      overflow: hidden;
+    }
+
+    .header-profile-pic {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    /* Login Area */
+    #login-area {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      flex-grow: 1;
+      gap: 2rem;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background:
+        radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 80% 70%, rgba(244, 114, 182, 0.15) 0%, transparent 40%);
+      z-index: -1;
+    }
+
+    .welcome-text {
+      text-align: center;
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .welcome-text h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(to right, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-weight: 700;
+    }
+
+    .welcome-text p {
+      color: var(--gray);
+      font-size: 1.1rem;
+      max-width: 500px;
+    }
+
+    .login-btn {
+      position: relative;
+      padding: 1rem 2rem;
+      color: white;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      z-index: 1;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+        box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+      }
+
+      50% {
+        transform: scale(1.03);
+        box-shadow: 0 4px 30px rgba(99, 102, 241, 0.4);
+      }
+    }
+
+    /* Search Area */
+    #search-area {
+      display: none;
+      background: rgba(15, 23, 42, 0.8);
+      padding: 1rem;
+      backdrop-filter: blur(10px);
+      animation: slideDown 0.3s ease-out;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.875rem 1.25rem;
+      background: rgba(30, 41, 59, 0.7);
+      color: white;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 12px;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(5px);
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+    }
+
+    .search-input::placeholder {
+      color: var(--gray);
+    }
+
+    /* Inbox Styles */
+    #inbox {
+      display: none;
+      flex-direction: column;
+      padding: 1rem;
+      overflow-y: auto;
+      flex-grow: 1;
+      background: var(--darker);
+    }
+
+    .inbox-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .inbox-title {
+      color: white;
+      font-size: 1.5rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    #chatList {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .chat-item {
+      padding: 1rem;
+      background: rgba(30, 41, 59, 0.7);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(5px);
+    }
+
+    .chat-item:hover {
+      background: rgba(30, 41, 59, 0.9);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      border-color: rgba(99, 102, 241, 0.3);
+    }
+
+    .chat-item strong {
+      font-size: 1rem;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .chat-item small {
+      color: var(--gray);
+      font-size: 0.8125rem;
+      line-height: 1.4;
+      display: block;
+      margin-top: 0.25rem;
+    }
+
+    .archive-btn {
+      position: absolute;
+      top: 50%;
+      right: 3.5rem;
+      /* Make space for the unread badge */
+      transform: translateY(-50%);
+      width: 2.25rem;
+      height: 2.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: rgba(99, 102, 241, 0.1);
+      color: var(--primary-light);
+      cursor: pointer;
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 10;
+    }
+
+    .chat-item:hover .archive-btn {
+      opacity: 1;
+    }
+
+    .archive-btn:hover {
+      background: var(--primary-dark);
+      color: white;
+    }
+
+    .unread-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 600;
+      transform: scale(0);
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+
+    .unread-badge.show {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    .time-badge {
+      float: right;
+      color: var(--primary-light);
+      font-size: 0.75rem;
+    }
+
+    .online-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background: linear-gradient(45deg, var(--primary), var(--secondary));
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .empty-state {
+      text-align: center;
+      margin-top: 2rem;
+      color: var(--gray);
+      display: none;
+    }
+
+    /* Chat Box Styles */
+    #chat-box {
+      display: none;
+      flex-grow: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      background: var(--darker);
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .message {
+      background: rgba(30, 41, 59, 0.8);
+      margin: 0.25rem 0;
+      padding: 0.875rem 1.25rem;
+      border-radius: 18px;
+      max-width: 80%;
+      word-wrap: break-word;
+      position: relative;
+      animation: messageSlide 0.3s ease-out;
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .message .delete-btn {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: rgba(30, 41, 59, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      transform: scale(0.8);
+      transition: all 0.2s ease-in-out;
+      color: var(--gray);
+      z-index: 10;
+    }
+
+    .message.self:hover .delete-btn {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .delete-btn:hover {
+      background: var(--danger);
+      color: white;
+    }
+
+    @keyframes messageSlide {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message.self {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      align-self: flex-end;
+      border-radius: 18px 18px 4px 18px;
+    }
+
+    .message:not(.self) {
+      border-radius: 18px 18px 18px 4px;
+    }
+
+    .message audio {
+      margin-top: 0.5rem;
+      max-width: 100%;
+      border-radius: 8px;
+    }
+
+    .sender-name {
+      font-size: 0.75rem;
+      margin-bottom: 0.25rem;
+      opacity: 0.8;
+      color: var(--gray);
+    }
+
+    .message.self .sender-name {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .message img {
+      max-width: 100%;
+      border-radius: 12px;
+      margin-top: 0.5rem;
+      cursor: pointer;
+    }
+
+    .receipt-area {
+      display: flex;
+      align-items: center;
+      gap: 0.15rem;
+      align-self: flex-end;
+      margin-top: 0.25rem;
+    }
+
+    .message .timestamp {
+      font-size: 0.75rem;
+      color: var(--gray);
+    }
+
+    .message.self .timestamp {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .receipt-ticks {
+      width: 16px;
+      height: 16px;
+      margin-left: 0.25rem;
+    }
+
+    .receipt-sent {
+      color: var(--gray);
+    }
+
+    .receipt-seen {
+      color: var(--success);
+      /* Green for seen */
+    }
+
+    .file-attachment {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 0.75rem 1rem;
+      border-radius: 12px;
+      margin-top: 0.5rem;
+      text-decoration: none;
+      color: var(--light);
+      transition: background 0.3s ease;
+    }
+
+    .file-attachment:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .file-attachment-icon {
+      flex-shrink: 0;
+    }
+
+    .file-attachment-info {
+      overflow: hidden;
+    }
+
+    .file-attachment-info span {
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-attachment-info small {
+      font-size: 0.75rem;
+      color: var(--gray);
+    }
+
+    /* Typing Indicator */
+    #typingIndicator {
+      padding: 0.5rem 1.25rem;
+      font-style: italic;
+      color: var(--primary-light);
+      font-size: 0.875rem;
+      min-height: 2.5rem;
+      display: flex;
+      align-items: center;
+    }
+
+    /* Input Area */
+    #input-area {
+      display: none;
+      background: rgba(15, 23, 42, 0.8);
+      padding: 1rem;
+      flex-direction: row;
+      align-items: center;
+      gap: 0.75rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+    }
+
+    #messageInput {
+      flex-grow: 1;
+      padding: 0.875rem 1.25rem;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 12px;
+      background: rgba(30, 41, 59, 0.7);
+      color: white;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      resize: none;
+      max-height: 120px;
+    }
+
+    #messageInput:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      margin-right: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 6px;
+      color: var(--primary-light);
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: all 0.2s ease;
+    }
+
+    .back-btn:hover {
+      background: rgba(99, 102, 241, 0.2);
+    }
+
+    /* --- Reaction Styles --- */
+    .reaction-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 4px;
+      justify-content: flex-end;
+    }
+
+    .reaction-bubble {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 2px 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .msg-options {
+      position: absolute;
+      top: -10px;
+      /* Floating above message */
+      right: 10px;
+      background: var(--dark);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 4px 8px;
+      display: none;
+      /* Hidden by default */
+      gap: 8px;
+      z-index: 10;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .message:hover .msg-options {
+      display: flex;
+      /* Show on hover */
+      animation: fadeIn 0.2s;
+    }
+
+    .option-btn {
+      cursor: pointer;
+      font-size: 1rem;
+      transition: transform 0.2s;
+    }
+
+    .option-btn:hover {
+      transform: scale(1.2);
+    }
+
+    /* --- Reply Styles --- */
+    .reply-preview-bar {
+      display: none;
+      /* Hidden by default */
+      background: rgba(30, 41, 59, 0.95);
+      padding: 10px 15px;
+      border-top: 1px solid var(--primary);
+      border-left: 4px solid var(--primary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      position: absolute;
+      bottom: 100%;
+      /* Sit on top of input area */
+      left: 0;
+      z-index: 50;
+      backdrop-filter: blur(5px);
+    }
+
+    .reply-content {
+      font-size: 0.85rem;
+      color: var(--gray);
+      max-width: 90%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .reply-content strong {
+      color: var(--primary-light);
+      display: block;
+      font-size: 0.75rem;
+      margin-bottom: 2px;
+    }
+
+    .quoted-message {
+      background: rgba(0, 0, 0, 0.2);
+      border-left: 3px solid var(--primary-light);
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+      font-size: 0.8rem;
+      opacity: 0.8;
+      cursor: pointer;
+    }
+
+    /* Vertical Line Separator */
+    .separator {
+      width: 1px;
+      height: 18px;
+      background: rgba(255, 255, 255, 0.2);
+      margin: 0 6px;
+    }
+
+    /* Base Option Button Styling */
+    .option-btn {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      color: var(--gray);
+      /* Default gray for icons */
+    }
+
+    /* Hover Effects */
+    .option-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: scale(1.1);
+    }
+
+    /* Specific Colors */
+    .option-btn.reply-action:hover {
+      color: var(--primary-light);
+      background: rgba(99, 102, 241, 0.15);
+    }
+
+    .option-btn.delete-action:hover {
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.15);
+    }
+
+    /* Emoji specific styling (keep them looking like emojis) */
+    .option-btn.emoji-action {
+      font-size: 1.1rem;
+      width: auto;
+      padding: 0 4px;
+    }
+
+    /* Modals */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1050;
+      backdrop-filter: blur(5px);
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    .modal {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 16px;
+      padding: 1.5rem;
+      width: 90%;
+      max-width: 24rem;
+      text-align: center;
+      animation: modalSlide 0.3s ease-out;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+    }
+
+    @keyframes modalSlide {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -60%);
+      }
+
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+      }
+    }
+
+    .modal h3 {
+      color: white;
+      margin-bottom: 1.25rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .modal-input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: rgba(30, 41, 59, 0.7);
+      color: white;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+    }
+
+    .modal-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+    }
+
+    .modal-btn {
+      padding: 0.75rem 1.25rem;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      border: none;
+      border-radius: 8px;
+      width: 100%;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .modal-btn.danger {
+      background: linear-gradient(135deg, var(--danger), #dc2626);
+    }
+
+    .modal-btn.secondary {
+      background: transparent;
+      color: var(--primary-light);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+
+    /* Alert */
+    #customAlert {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(15, 23, 42, 0.95);
+      padding: 1.5rem 2rem;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 16px;
+      z-index: 2000;
+      text-align: center;
+      animation: alertPop 0.3s ease-out;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      max-width: 90%;
+      width: 24rem;
+    }
+
+    @keyframes alertPop {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.9);
+      }
+
+      100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    .alert-content {
+      margin-bottom: 1.5rem;
+      color: white;
+    }
+
+    .alert-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+
+    .alert-btn {
+      padding: 0.5rem 1.25rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      border: none;
+    }
+
+    /* Loading States */
+    .loading {
+      position: relative;
+      opacity: 0.8;
+      pointer-events: none;
+    }
+
+    .loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 1.25rem;
+      height: 1.25rem;
+      border: 2px solid var(--primary);
+      border-top: 2px solid transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      transform: translate(-50%, -50%);
+    }
+
+    @keyframes spin {
+      0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+      }
+
+      100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+      }
+    }
+
+    /* Success States */
+    .success {
+      background: rgba(16, 185, 129, 0.2) !important;
+      border-color: var(--success) !important;
+      animation: successPulse 0.5s ease;
+    }
+
+    @keyframes successPulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.02);
+      }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 3px;
+    }
+
+    /* New Chat Modal Specific Styles */
+    #newChatResults {
+      min-height: 150px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .user-search-card {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .user-search-card:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .user-search-card .profile-pic {
+      width: 40px;
+      height: 40px;
+      margin-right: 0.75rem;
+    }
+
+    .user-search-card-info strong {
+      display: block;
+      color: var(--light);
+      font-weight: 500;
+    }
+
+    .user-search-card-info small {
+      color: var(--gray);
+    }
+
+    /* Group Chip Styles */
+    .user-chip {
+      background: rgba(99, 102, 241, 0.2);
+      border: 1px solid var(--primary);
+      border-radius: 20px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: white;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .user-chip .remove-chip {
+      cursor: pointer;
+      color: var(--primary-light);
+      font-weight: bold;
+      padding: 0 2px;
+    }
+
+    .user-chip .remove-chip:hover {
+      color: var(--danger);
+    }
+
+    /* Friend List Item */
+    .friend-item {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+      transition: background 0.2s;
+      border-radius: 6px;
+    }
+
+    .friend-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* Selected State */
+    .friend-item.selected {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid var(--primary);
+    }
+
+    .friend-item img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-right: 10px;
+      object-fit: cover;
+    }
+
+    .friend-item .info {
+      flex-grow: 1;
+    }
+
+    .friend-item .info h4 {
+      font-size: 0.9rem;
+      margin: 0;
+      color: white;
+    }
+
+    .friend-item .info small {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    /* Checkbox Circle */
+    .friend-checkbox {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid #94a3b8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .friend-item.selected .friend-checkbox {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .friend-item.selected .friend-checkbox::after {
+      content: '✓';
+      color: white;
+      font-size: 12px;
+    }
+
+    /* Make the chat header interactive */
+    .chat-header-clickable {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      cursor: pointer;
+      padding: 0.25rem 0.75rem;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+
+    .chat-header-clickable:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Member List Items in Info Modal */
+    .member-item {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem;
+      border-radius: 6px;
+      margin-bottom: 2px;
+    }
+
+    .member-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .member-item img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      margin-right: 0.75rem;
+    }
+
+    /* System Message (WhatsApp Style) */
+    .message.system {
+      align-self: center !important;
+      /* Forces it to the middle */
+      background: rgba(255, 255, 255, 0.1);
+      /* Dark transparent background */
+      color: #cbd5e1;
+      /* Light gray text */
+      font-size: 0.75rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 99px;
+      /* Pill shape */
+      margin: 0.5rem 0;
+      max-width: 90%;
+      text-align: center;
+      border: none;
+      box-shadow: none;
+      width: auto;
+    }
+
+    /* Remove hover options for system messages */
+    .message.system:hover {
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: none;
+      transform: none;
+    }
+
+    .message.system .msg-options,
+    .message.system .receipt-area,
+    .message.system .sender-name {
+      display: none !important;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="logo">
+      <span class="logo-icon">💬</span>
+      <span>ConnectHub</span>
+    </div>
+    <div class="header-icons" id="topIcons">
+      <div class="icon-btn" id="searchIcon" title="Search Users">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </div>
+      <div class="icon-btn" onclick="openNewChat()" title="New Chat">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20v-6M6 14H0M18 14h6M14 6V0M14 18v6M6 14V6M0 6h6M18 6h6M6 0v6M18 0v6" />
+        </svg>
+      </div>
+      <div class="icon-btn" onclick="openGroupModal()" title="Create Group">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+      </div>
+      <div class="icon-btn" onclick="openSettings()" title="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+          </path>
+        </svg>
+      </div>
+    </div>
+  </header>
+
+  <div id="login-area">
+    <div class="login-bg"></div>
+    <div class="welcome-text">
+      <h1>Welcome to ConnectHub</h1>
+      <p>Where every conversation builds a stronger connection.</p>
+    </div>
+    <button id="btn" class="login-btn" onclick="googleLogin()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path
+          d="M21.8 13H12v3.9h5.8c-.8 2.3-2.9 3.9-5.8 3.9-3.3 0-6-2.7-6-6s2.7-6 6-6c1.5 0 2.9.6 4 1.5l2.8-2.8C16.2 3.2 14.2 2 12 2 6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10c0-.7-.1-1.4-.2-2z">
+        </path>
+      </svg>
+      Login with Google
+    </button>
+  </div>
+
+  <div id="search-area">
+    <input id="searchInput" class="search-input" placeholder="Filter your inbox..." oninput="filterInbox(this.value)">
+  </div>
+
+  <div id="inbox">
+    <div class="inbox-header">
+      <h2 class="inbox-title">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        Your Conversations
+      </h2>
+    </div>
+    <div id="chatList"></div>
+    <div id="emptyState" class="empty-state">
+      <div class="empty-icon">💭</div>
+      <p>No conversations yet</p>
+      <p style="font-size: 0.875rem; margin-top: 0.5rem;">Search for a friend to start chatting</p>
+    </div>
+  </div>
+
+  <main id="chat-box"></main>
+  <div id="typingIndicator"></div>
+
+  <div id="input-area" style="position: relative;">
+    <div id="replyPreview" class="reply-preview-bar" style="display: none;">
+      <div class="reply-content" id="replyContent">
+        <strong>Replying to Name</strong>
+        <span>Message text...</span>
+      </div>
+      <div class="icon-btn" style="width: 24px; height: 24px;" onclick="cancelReply()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </div>
+    </div>
+    <button id="attachBtn" class="icon-btn" onclick="triggerFileInput()" title="Attach File">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path
+          d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48">
+        </path>
+      </svg>
+    </button>
+    <input type="file" id="fileInput" onchange="sendFile(this.files[0])" style="display: none;" />
+    <input id="messageInput" placeholder="Type your message..." />
+    <button id="recordBtn" class="record-btn" onclick="toggleRecording()" title="Record Voice Message">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+        <line x1="12" y1="19" x2="12" y2="23"></line>
+        <line x1="8" y1="23" x2="16" y2="23"></line>
+      </svg>
+    </button>
+    <button class="send-btn" onclick="sendMessage()" title="Send Message">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"></line>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
+    </button>
+
+  </div>
+
+  <div id="settingsOverlay" class="modal-overlay">
+    <div class="modal">
+      <h3>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+          </path>
+        </svg>
+        Settings
+      </h3>
+      <div style="position: relative; width: 80px; margin: 0 auto 1rem auto; cursor: pointer;"
+        onclick="triggerProfileUpload()">
+        <img id="settingsUserPhoto" class="profile-pic" src="" alt="Profile"
+          style="width: 80px; height: 80px; border: 2px solid var(--primary);">
+        <div
+          style="position: absolute; bottom: 0; right: 0; background: var(--primary); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--dark);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+            <circle cx="12" cy="13" r="4"></circle>
+          </svg>
+        </div>
+      </div>
+
+      <input type="file" id="profileFileInput" accept="image/*" style="display: none;"
+        onchange="previewProfilePhoto(this.files[0])">
+      <input id="newUsername" class="modal-input" placeholder="Enter new username" maxlength="50">
+      <button class="modal-btn" onclick="applyUsername()">Save Username</button>
+      <button class="modal-btn danger" onclick="confirmLogout()">Logout</button>
+      <button class="modal-btn secondary" onclick="closeSettings()">Close</button>
+    </div>
+  </div>
+
+  <div id="newChatOverlay" class="modal-overlay">
+    <div class="modal" style="max-width: 28rem;">
+      <h3>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20v-6M6 14H0M18 14h6M14 6V0M14 18v6M6 14V6M0 6h6M18 6h6M6 0v6M18 0v6" />
+        </svg>
+        Start New Chat
+      </h3>
+      <p class="text-sm text-gray-400 mb-4">Find users by their full email address.</p>
+
+      <div class="flex gap-2 items-center">
+        <input id="newChatSearchInput" class="modal-input flex-grow" placeholder="Enter friend's email..."
+          onkeydown="if(event.key==='Enter') searchForNewUser()" style="margin-bottom: 0; font-size: 0.875rem;">
+        <button class="modal-btn" onclick="searchForNewUser()"
+          style="width: auto; margin-bottom: 0; font-size: 0.875rem;">Search</button>
+      </div>
+      <div id="recentSearches" class="mt-4"></div>
+      <div id="newChatResults" class="mt-4 text-left">
+      </div>
+
+      <button class="modal-btn secondary mt-4" onclick="closeNewChat()">Close</button>
+    </div>
+  </div>
+  <div id="groupChatOverlay" class="modal-overlay">
+    <div class="modal" style="max-width: 28rem; height: 85vh; display: flex; flex-direction: column;">
+      <h3 style="margin-bottom: 1rem;">Create New Group</h3>
+
+      <div style="display:flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; flex-shrink: 0;">
+        <div style="position: relative; width: 60px; height: 60px; cursor: pointer;"
+          onclick="document.getElementById('groupImageInput').click()">
+          <img id="groupImagePreview" src="https://placehold.co/60x60/6366f1/ffffff?text=+"
+            style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary);">
+          <div
+            style="position: absolute; bottom: 0; right: 0; background: var(--primary); border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;">
+            +</div>
+        </div>
+        <input id="groupNameInput" class="modal-input" placeholder="Group Name" style="margin-bottom: 0; flex-grow: 1;">
+        <input type="file" id="groupImageInput" accept="image/*" style="display: none;"
+          onchange="previewGroupImage(this.files[0])">
+      </div>
+
+      <div style="margin-bottom: 0.5rem; flex-shrink: 0;">
+        <input id="friendFilterInput" class="modal-input" placeholder="Filter recent friends..."
+          onkeyup="filterFriendsList()" style="width: 100%; margin-bottom: 0;">
+      </div>
+
+      <div
+        style="flex-grow: 1; overflow-y: auto; margin-bottom: 0.5rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.5rem;"
+        id="suggestedFriendsList">
+        <div style="text-align: center; color: gray; padding: 1rem;">Loading friends...</div>
+      </div>
+
+      <div
+        style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.75rem; margin-bottom: 1rem; flex-shrink: 0;">
+        <p style="font-size: 0.8rem; color: var(--gray); margin-bottom: 0.5rem;">Or add someone new by email:</p>
+        <div style="display: flex; gap: 0.5rem;">
+          <input id="groupManualEmail" class="modal-input" placeholder="user@email.com"
+            style="margin-bottom: 0; font-size: 0.9rem;">
+          <button class="modal-btn secondary" onclick="addGroupMemberByEmail()"
+            style="width: auto; padding: 0 1rem;">Add</button>
+        </div>
+      </div>
+
+      <div style="flex-shrink: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+        <div id="selectedCount" style="font-size: 0.8rem; color: var(--primary-light); text-align: right;">0 selected
+        </div>
+        <button id="createGroupBtn" class="modal-btn" onclick="finalizeGroupCreation()">Create Group</button>
+        <button class="modal-btn secondary" onclick="closeGroupModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div id="addMemberOverlay" class="modal-overlay" style="z-index: 2000;">
+    <div class="modal" style="max-width: 26rem; height: 70vh; display: flex; flex-direction: column;">
+      <h3>Add People</h3>
+
+      <input id="addMemberFilter" class="modal-input" placeholder="Search your friends..."
+        onkeyup="filterAddMemberList()" style="flex-shrink: 0;">
+
+      <div
+        style="flex-grow: 1; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 1rem; padding: 0.5rem;"
+        id="addMemberListContainer">
+        <div style="color: gray; text-align: center; padding: 1rem;">Loading friends...</div>
+      </div>
+
+      <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem; margin-bottom: 1rem;">
+        <p style="font-size: 0.8rem; color: var(--gray); margin-bottom: 0.5rem;">Or add a new person by email:</p>
+        <div style="display: flex; gap: 0.5rem;">
+          <input id="manualAddEmail" class="modal-input" placeholder="user@email.com"
+            style="margin-bottom: 0; font-size: 0.9rem;">
+          <button class="modal-btn secondary" onclick="addMemberByEmailManual()"
+            style="width: auto; padding: 0 1rem;">Add</button>
+        </div>
+      </div>
+
+      <button id="confirmAddMembersBtn" class="modal-btn" onclick="executeAddSelectedMembers()">Add Selected
+        (0)</button>
+      <button class="modal-btn secondary"
+        onclick="document.getElementById('addMemberOverlay').style.display = 'none'">Cancel</button>
+    </div>
+  </div>
+  <div id="chatInfoOverlay" class="modal-overlay">
+    <div class="modal" style="max-width: 24rem;">
+
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <img id="infoModalImage" src=""
+          style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 4px solid var(--primary); margin-bottom: 1rem;">
+        <h2 id="infoModalName" style="color: white; margin-bottom: 0.25rem;">Chat Name</h2>
+        <p id="infoModalSubtitle" style="color: var(--gray); font-size: 0.9rem;">details...</p>
+      </div>
+
+      <div id="infoMembersSection" style="display: none; text-align: left;">
+        <h4
+          style="color: var(--primary-light); margin-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+          Members
+        </h4>
+        <div id="infoMembersList" style="max-height: 200px; overflow-y: auto; margin-bottom: 1.5rem;">
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <button id="addMemberBtn" class="modal-btn" style="display: none; background: #3b82f6;"
+          onclick="addNewMemberToGroup()">Add Member</button>
+        <button id="leaveGroupBtn" class="modal-btn danger" style="display: none;" onclick="leaveCurrentGroup()">Leave
+          Group</button>
+        <button class="modal-btn secondary"
+          onclick="document.getElementById('chatInfoOverlay').style.display = 'none'">Close</button>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="customAlert">
+    <div class="alert-content" id="alertText"></div>
+    <div class="alert-buttons">
+      <button class="alert-btn primary" onclick="closeAlert()">OK</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+
+  <script>
+    firebase.initializeApp({
+      apiKey: "AIzaSyC0N-K5E7pfOs1wPYuSVIZ3bvUzSNA4qcY",
+      authDomain: "chatapp-f20ea.firebaseapp.com",
+      projectId: "chatapp-f20ea",
+      storageBucket: "chatapp-f20ea.firebasestorage.app",
+      databaseURL: "https://chatapp-f20ea-default-rtdb.firebaseio.com",
+      messagingSenderId: "853734238442",
+      appId: "1:853734238442:web:4f06be4ba7fd55419fcf93"
+    });
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+    const rtdb = firebase.database();
+    const messaging = firebase.messaging();
+
+    const loginArea = document.getElementById("login-area");
+    const inbox = document.getElementById("inbox");
+    const chatBox = document.getElementById("chat-box");
+    const inputArea = document.getElementById("input-area");
+    const msgInput = document.getElementById("messageInput");
+    const searchArea = document.getElementById("search-area");
+    const searchInput = document.getElementById("searchInput");
+    const topIcons = document.getElementById("topIcons");
+    const customAlert = document.getElementById("customAlert");
+    const alertText = document.getElementById("alertText");
+    const chatList = document.getElementById("chatList");
+    const emptyState = document.getElementById("emptyState");
+    const recordBtn = document.getElementById("recordBtn");
+
+    let currentUser = null;
+    let currentChatId = null;
+    let unsubscribeMsgs = null;
+    let unsubscribeInbox = null;
+    let typingTimeout = null;
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
+    let isReplying = false;
+    let replyToData = null; // { id, text, senderName }
+    let groupStagingUsers = [];
+    let groupImageFile = null;
+    let addMemberSelection = [];
+
+    // Enhanced message input handling
+    msgInput.addEventListener('input', () => {
+      clearTimeout(typingTimeout);
+      updateTypingStatus(msgInput.value.length > 0);
+
+      typingTimeout = setTimeout(() => {
+        updateTypingStatus(false);
+      }, 1000);
+    });
+
+    msgInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    /**
+ * Displays a custom alert.
+ * @param {string} msg The message or HTML to display.
+ * @param {boolean} [isHTML=false] If true, 'msg' is treated as HTML.
+ */
+    function showAlert(msg, isHTML = false) {
+      const alertContent = document.getElementById('alertText');
+      const defaultButtons = document.querySelector('#customAlert .alert-buttons');
+
+      if (isHTML) {
+        alertContent.innerHTML = msg;
+        // Hide the default "OK" button when showing custom HTML
+        if (defaultButtons) defaultButtons.style.display = 'none';
+      } else {
+        alertContent.textContent = msg;
+        // Show the default "OK" button for simple text messages
+        if (defaultButtons) defaultButtons.style.display = 'flex';
+      }
+
+      customAlert.style.display = "block";
+    }
+
+    function closeAlert() {
+      customAlert.style.display = "none";
+
+      // Reset the default buttons to be visible for the next text-only alert
+      const defaultButtons = document.querySelector('#customAlert .alert-buttons');
+      if (defaultButtons) defaultButtons.style.display = 'flex';
+    }
+
+    function formatTimestamp(timestamp) {
+      if (!timestamp) {
+        return '';
+      }
+      const date = timestamp.toDate();
+      // Using toLocaleTimeString to get a nicely formatted time like "10:30 AM"
+      return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+    // --- ADD THESE MISSING FUNCTIONS ---
+
+    function triggerFileInput() {
+      document.getElementById('fileInput').click();
+    }
+
+    function saveRecentSearch(email) {
+      let searches = JSON.parse(localStorage.getItem("recentSearches") || "[]");
+      searches = searches.filter(e => e !== email);
+      searches.unshift(email);
+      if (searches.length > 5) searches.pop();
+      localStorage.setItem("recentSearches", JSON.stringify(searches));
+      showRecentSearches();
+    }
+
+    function showRecentSearches() {
+      const container = document.getElementById("recentSearches");
+      const searches = JSON.parse(localStorage.getItem("recentSearches") || "[]");
+      if (searches.length === 0) return container.innerHTML = "";
+
+      container.innerHTML = "<strong>Recent:</strong><br>" +
+        searches.map(email =>
+          `<span class="recent-tag" onclick="searchFromRecent('${email}')">${email}</span>`
+        ).join('');
+    }
+
+    function searchFromRecent(email) {
+      // 1. Open the New Chat modal
+      openNewChat();
+      // 2. Put the email into the modal's search input
+      document.getElementById('newChatSearchInput').value = email;
+      // 3. Automatically trigger the search
+      searchForNewUser();
+    }
+
+
+
+    // --- Auth & Login Functions ---
+
+    function googleLogin() {
+      const btn = document.getElementById('btn');
+      btn.classList.add('loading');
+      btn.innerHTML = 'Connecting...';
+      inbox.style.display = "none";
+
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(err => {
+        // Handle login failure
+        loginArea.style.display = "flex";
+        inbox.style.display = "none";
+        showAlert('Login failed: ' + err.message);
+        btn.classList.remove('loading');
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.8 13H12v3.9h5.8c-.8 2.3-2.9 3.9-5.8 3.9-3.3 0-6-2.7-6-6s2.7-6 6-6c1.5 0 2.9.6 4 1.5l2.8-2.8C16.2 3.2 14.2 2 12 2 6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10c0-.7-.1-1.4-.2-2z"></path>
+          </svg> Login with Google`;
+      });
+      // NOTE: The rest of the login logic is now in auth.onAuthStateChanged
+    }
+
+    function initUIAfterLogin() {
+      loginArea.style.display = "none";
+      inbox.style.display = "flex";
+      topIcons.style.display = "flex";
+      setupInboxListener(); // Call the persistent listener
+      listenForUserUpdates(); // Call the online status listener
+    }
+
+    function confirmLogout() {
+      closeSettings();
+      showAlert(`
+        <div style="margin-bottom: 1rem;">Are you sure you want to logout?</div>
+        <div class="alert-buttons">
+          <button class="alert-btn danger" onclick="logoutNow()">Yes, Logout</button>
+          <button class="alert-btn secondary" onclick="closeAlert()">Cancel</button>
+        </div>
+      `, true);
+    }
+
+    function logoutNow() {
+      // The onDisconnect hook will handle setting 'online: false'
+      auth.signOut().then(() => location.reload());
+    }
+
+    // --- Presence & User Listeners ---
+
+    function listenForUserUpdates() {
+      db.collection('users').onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'modified') {
+            const updatedUser = change.doc.data();
+            const uid = change.doc.id;
+            const dotElement = document.getElementById(`dot-${uid}`);
+            if (dotElement) {
+              dotElement.style.display = updatedUser.online ? 'inline-block' : 'none';
+            }
+          }
+        });
+      }, (error) => {
+        console.error("Error listening for user updates:", error);
+      });
+    }
+
+
+    // --- GROUP CHAT STATE & FUNCTIONS ---
+    function openGroupModal() {
+      document.getElementById('groupChatOverlay').style.display = 'block';
+      groupStagingUsers = [];
+      groupImageFile = null;
+      document.getElementById('selectedUsersContainer').innerHTML = '<span style="color:gray; font-size: 0.8rem; width:100%; text-align:center; margin-top:0.5rem;">Added friends will appear here</span>';
+      document.getElementById('groupNameInput').value = '';
+      document.getElementById('groupSearchInput').value = '';
+      document.getElementById('groupImagePreview').src = 'https://placehold.co/60x60/6366f1/ffffff?text=+';
+    }
+
+    function closeGroupModal() {
+      document.getElementById('groupChatOverlay').style.display = 'none';
+    }
+
+
+
+
+    function openGroupModal() {
+      document.getElementById('groupChatOverlay').style.display = 'block';
+
+      // Reset Variables
+      groupStagingUsers = [];
+      document.getElementById('groupNameInput').value = '';
+      document.getElementById('friendFilterInput').value = '';
+      document.getElementById('groupImagePreview').src = 'https://placehold.co/60x60/6366f1/ffffff?text=+';
+      updateSelectedCount();
+
+      // Load friends instantly
+      loadRecentContacts();
+    }
+
+    async function loadRecentContacts() {
+      const listContainer = document.getElementById('suggestedFriendsList');
+      listContainer.innerHTML = '<div style="text-align: center; color: gray; padding: 1rem;">Loading recent chats...</div>';
+
+      try {
+        // Get recent chats to find friends
+        const snapshot = await db.collection('chats')
+          .where('members', 'array-contains', currentUser.uid)
+          .limit(20)
+          .get();
+
+        const uniqueFriendIds = new Set();
+
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.type !== 'group') {
+            const friendId = data.members.find(id => id !== currentUser.uid);
+            if (friendId) uniqueFriendIds.add(friendId);
+          }
+        });
+
+        if (uniqueFriendIds.size === 0) {
+          listContainer.innerHTML = '<div style="text-align: center; color: gray; padding: 1rem;">No recent friends found.</div>';
+          return;
+        }
+
+        listContainer.innerHTML = '';
+
+        // Render each friend
+        uniqueFriendIds.forEach(async (uid) => {
+          const userDoc = await db.collection('users').doc(uid).get();
+          if (userDoc.exists) {
+            const user = userDoc.data();
+            user.uid = uid;
+            renderFriendItem(user);
+          }
+        });
+
+      } catch (error) {
+        console.error("Error loading contacts", error);
+        listContainer.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 1rem;">Error loading friends</div>';
+      }
+    }
+
+    function renderFriendItem(user) {
+      const container = document.getElementById('suggestedFriendsList');
+      const div = document.createElement('div');
+
+      const pic = user.photoURL || `https://ui-avatars.com/api/?name=${user.name}&background=random`;
+
+      div.className = 'friend-item';
+      // Store search data
+      div.dataset.name = (user.name || user.email).toLowerCase();
+
+      div.innerHTML = `
+      <img src="${pic}">
+      <div class="info">
+          <h4>${user.name || 'Unknown'}</h4>
+          <small>${user.email}</small>
+      </div>
+      <div class="friend-checkbox"></div>
+  `;
+
+      // Toggle Selection
+      div.onclick = () => {
+        const isSelected = div.classList.contains('selected');
+        if (isSelected) {
+          div.classList.remove('selected');
+          groupStagingUsers = groupStagingUsers.filter(u => u.uid !== user.uid);
+        } else {
+          div.classList.add('selected');
+          groupStagingUsers.push(user);
+        }
+        updateSelectedCount();
+      };
+
+      container.appendChild(div);
+    }
+
+    function filterFriendsList() {
+      const filter = document.getElementById('friendFilterInput').value.toLowerCase();
+      const items = document.querySelectorAll('.friend-item');
+      items.forEach(item => {
+        item.style.display = item.dataset.name.includes(filter) ? 'flex' : 'none';
+      });
+    }
+
+    function updateSelectedCount() {
+      document.getElementById('selectedCount').innerText = `${groupStagingUsers.length} selected`;
+    }
+
+    function previewGroupImage(file) {
+      if (!file) return;
+      groupImageFile = file;
+      const reader = new FileReader();
+      reader.onload = (e) => document.getElementById('groupImagePreview').src = e.target.result;
+      reader.readAsDataURL(file);
+    }
+
+    async function searchUserForGroup() {
+      const email = document.getElementById('groupSearchInput').value.trim().toLowerCase();
+      if (!email) return;
+      if (email === currentUser.email) return showAlert("You are already in the group!");
+
+      // Check if already added
+      if (groupStagingUsers.find(u => u.email === email)) {
+        return showAlert("User already added!");
+      }
+
+      try {
+        const snap = await db.collection("users").where("email", "==", email).get();
+        if (snap.empty) return showAlert("User not found");
+
+        const user = snap.docs[0].data();
+        user.uid = snap.docs[0].id;
+
+        groupStagingUsers.push(user);
+        renderGroupChips();
+        document.getElementById('groupSearchInput').value = '';
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderGroupChips() {
+      const container = document.getElementById('selectedUsersContainer');
+      if (groupStagingUsers.length === 0) {
+        container.innerHTML = '<span style="color:gray; font-size: 0.8rem; width:100%; text-align:center; margin-top:0.5rem;">Added friends will appear here</span>';
+        return;
+      }
+      container.innerHTML = groupStagingUsers.map((u, index) => `
+    <div class="user-chip">
+      <span>${u.name || u.email}</span>
+      <span class="remove-chip" onclick="removeGroupUser(${index})">×</span>
+    </div>
+  `).join('');
+    }
+
+    function removeGroupUser(index) {
+      groupStagingUsers.splice(index, 1);
+      renderGroupChips();
+    }
+
+    async function finalizeGroupCreation() {
+      const groupName = document.getElementById('groupNameInput').value.trim();
+      if (!groupName) return showAlert("Please enter a group name");
+      if (groupStagingUsers.length === 0) return showAlert("Please add at least one friend");
+
+      const btn = document.getElementById('createGroupBtn');
+      btn.innerText = "Creating...";
+      btn.disabled = true;
+
+      try {
+        // 1. Upload Image if exists
+        let groupPhotoURL = '';
+        if (groupImageFile) {
+          const ref = storage.ref(`group_images/${Date.now()}_${groupImageFile.name}`);
+          await ref.put(groupImageFile);
+          groupPhotoURL = await ref.getDownloadURL();
+        }
+
+        // 2. Prepare Members
+        const memberIds = [currentUser.uid, ...groupStagingUsers.map(u => u.uid)];
+
+        // 3. Create Chat Document
+        const chatRef = await db.collection('chats').add({
+          type: 'group',
+          groupName: groupName,
+          groupImage: groupPhotoURL,
+          createdBy: currentUser.uid,
+          members: memberIds,
+          admin: [currentUser.uid],
+          lastUpdate: firebase.firestore.FieldValue.serverTimestamp(),
+          [`unreadCounts.${currentUser.uid}`]: 0
+        });
+
+        // --- NEW: Send "Group Created" System Message ---
+        const names = groupStagingUsers.map(u => u.name || u.email.split('@')[0]).join(", ");
+        await chatRef.collection('messages').add({
+          sender: currentUser.uid,
+          senderName: currentUser.name,
+          text: `${currentUser.name} created group "${groupName}" with: ${names}`,
+          type: "system", // Indicates a system message
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          status: 'sent'
+        });
+
+        closeGroupModal();
+        showAlert("Group created successfully!");
+      } catch (e) {
+        console.error(e);
+        showAlert("Error creating group");
+      } finally {
+        btn.innerText = "Create Group";
+        btn.disabled = false;
+      }
+    }
+
+    // --- Main Inbox Function (Persistent Listener) ---
+
+    async function setupInboxListener() {
+      if (!currentUser) return;
+      if (unsubscribeInbox) unsubscribeInbox(); // Stop old listener
+
+      emptyState.style.display = 'none';
+
+      unsubscribeInbox = db.collection('chats')
+        .where('members', 'array-contains', currentUser.uid)
+        .orderBy('lastUpdate', 'desc')
+        .onSnapshot(async (chatsSnap) => {
+
+          if (chatsSnap.empty) {
+            emptyState.style.display = 'block';
+            chatList.innerHTML = '';
+            return;
+          }
+
+          for (const change of chatsSnap.docChanges()) {
+            const chatId = change.doc.id;
+            const data = change.doc.data();
+            let item = document.querySelector(`[data-chat-id="${chatId}"]`);
+
+            // 1. Archive Filter & Remove Handler
+            if (change.type === "removed" || (data.archivedBy && data.archivedBy.includes(currentUser.uid))) {
+              if (item) item.remove();
+              continue;
+            }
+
+            // 2. Determine Chat Type (Group vs Direct)
+            let chatName, chatPic, isOnline = false;
+            let chatObjectForOpen = {};
+
+            if (data.type === 'group') {
+              // --- GROUP LOGIC ---
+              chatName = data.groupName;
+              chatPic = data.groupImage || '';
+              isOnline = false;
+
+              chatObjectForOpen = {
+                uid: chatId,
+                name: chatName,
+                photoURL: chatPic,
+                type: 'group',
+                members: data.members // <--- THIS WAS MISSING!
+              };
+            } else {
+              // --- DIRECT LOGIC ---
+              const friendUid = data.members.find(uid => uid !== currentUser.uid);
+              if (!friendUid) continue;
+
+              try {
+                const userSnap = await db.collection('users').doc(friendUid).get();
+                if (!userSnap.exists) continue;
+                const friend = userSnap.data();
+                friend.uid = friendUid;
+
+                chatName = friend.name || friend.email;
+                chatPic = friend.photoURL;
+                isOnline = friend.online;
+
+                chatObjectForOpen = friend;
+                chatObjectForOpen.type = 'direct';
+              } catch (e) {
+                console.error("Error fetching friend data:", e);
+                continue;
+              }
+            }
+
+            // 3. Fetch Last Message
+            const msgs = await db.collection('chats').doc(chatId).collection('messages').orderBy('timestamp', 'desc').limit(1).get();
+            let lastMsg = 'No messages yet', lastTime = '';
+
+            if (!msgs.empty) {
+              const msgData = msgs.docs[0].data();
+              const prefix = (data.type === 'group' && msgData.senderName)
+                ? `${msgData.senderName.split(' ')[0]}: `
+                : '';
+
+              if (msgData.type === 'image') lastMsg = prefix + '📷 Image';
+              else if (msgData.type === 'audio') lastMsg = prefix + '🎵 Voice';
+              else if (msgData.type === 'file') lastMsg = prefix + '📄 File';
+              else lastMsg = prefix + (msgData.text || '...');
+
+              const date = msgData.timestamp?.toDate();
+              if (date) {
+                lastTime = date.toDateString() === new Date().toDateString()
+                  ? date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+                  : date.toLocaleDateString();
+              }
+            }
+
+            // 4. Render HTML
+            let unreadCount = data.unreadCounts?.[currentUser.uid] || 0;
+            const badgeHtml = unreadCount > 0 ? `<div class="unread-badge show">${unreadCount}</div>` : `<div class="unread-badge">0</div>`;
+
+            const defaultIcon = data.type === 'group' ? '👥' : '👤';
+            const imgHtml = chatPic
+              ? `<img class="profile-pic mr-4" src="${chatPic}" alt="Pic">`
+              : `<div class="profile-pic mr-4 bg-gray-700 flex items-center justify-center text-xl">${defaultIcon}</div>`;
+
+            const dot = (isOnline) ? `<span class="online-dot"></span>` : ``;
+
+            const newItemHtml = `
+             ${imgHtml}
+             <div class="chat-item-details">
+                 <strong>${dot} ${chatName}</strong>
+                 <small class="truncate">${lastMsg} <span class="time-badge">${lastTime}</span></small>
+             </div>
+             ${badgeHtml}
+             <div class="archive-btn" onclick="archiveChat(event, '${chatId}')" title="Archive Chat">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+             </div>
+        `;
+
+            if (change.type === "added") {
+              if (!item) {
+                const newItem = document.createElement('div');
+                newItem.setAttribute('data-chat-id', chatId);
+                newItem.className = 'chat-item flex items-center';
+                newItem.onclick = () => openChat(chatId, chatObjectForOpen);
+                newItem.innerHTML = newItemHtml;
+                chatList.appendChild(newItem);
+              }
+            } else if (change.type === "modified") {
+              if (item) {
+                item.innerHTML = newItemHtml;
+                item.onclick = () => openChat(chatId, chatObjectForOpen);
+                chatList.prepend(item);
+              } else {
+                const newItem = document.createElement('div');
+                newItem.setAttribute('data-chat-id', chatId);
+                newItem.className = 'chat-item flex items-center';
+                newItem.onclick = () => openChat(chatId, chatObjectForOpen);
+                newItem.innerHTML = newItemHtml;
+                chatList.prepend(newItem);
+              }
+            }
+          }
+          emptyState.style.display = chatList.children.length === 0 ? 'block' : 'none';
+        },
+          // --- ERROR HANDLING BLOCK ---
+          (error) => {
+            console.error("Error loading inbox:", error);
+            if (error.code !== 'permission-denied') {
+              showAlert("Error loading conversations.");
+            }
+            emptyState.style.display = 'block';
+            chatList.innerHTML = '';
+          });
+    }
+
+
+    // --- Search & New Chat Functions ---
+
+    document.getElementById('searchIcon').onclick = () => {
+      const showing = searchArea.style.display === 'block';
+      searchArea.style.display = showing ? 'none' : 'block';
+      if (!showing) {
+        searchInput.focus();
+      }
+    };
+
+    function filterInbox(query) {
+      const normalizedQuery = query.toLowerCase();
+      const chatItems = document.querySelectorAll('#chatList .chat-item');
+      chatItems.forEach(item => {
+        const username = item.querySelector('strong').textContent.toLowerCase();
+        item.style.display = username.includes(normalizedQuery) ? 'flex' : 'none';
+      });
+    }
+
+    function openNewChat() {
+      document.getElementById('newChatSearchInput').value = '';
+      document.getElementById('newChatResults').innerHTML = '';
+      document.getElementById('newChatOverlay').style.display = 'block';
+      showRecentSearches();
+    }
+
+    function closeNewChat() {
+      document.getElementById('newChatOverlay').style.display = 'none';
+    }
+
+    async function searchForNewUser() {
+      const email = document.getElementById('newChatSearchInput').value.trim().toLowerCase();
+      const resultsContainer = document.getElementById('newChatResults');
+
+      if (!email) {
+        resultsContainer.innerHTML = '<p class="text-sm text-gray-400">Please enter an email to search.</p>';
+        return;
+      }
+      if (email === currentUser.email) {
+        resultsContainer.innerHTML = '<p class="text-sm text-gray-400">You cannot start a chat with yourself.</p>';
+        return;
+      }
+      resultsContainer.innerHTML = '<p class="text-sm text-gray-400">Searching...</p>';
+
+      try {
+        const snap = await db.collection("users").where("email", "==", email).get();
+
+        if (snap.empty) {
+          resultsContainer.innerHTML = '<p class="text-sm text-gray-400">No user found with that email.</p>';
+          return;
+        }
+
+        resultsContainer.innerHTML = '';
+        snap.forEach(doc => {
+          const friend = doc.data();
+          const friendUid = doc.id;
+          const profilePicHtml = friend.photoURL
+            ? `<img class="profile-pic" src="${friend.photoURL}" alt="Profile picture">`
+            : `<div class="profile-pic bg-gray-700 flex items-center justify-center text-xl">👤</div>`;
+
+          const card = document.createElement('div');
+          card.className = 'user-search-card';
+          card.onclick = (event) => startChatFromSearch(event, friendUid, JSON.stringify(friend));
+
+          card.innerHTML = `
+              ${profilePicHtml}
+              <div class="user-search-card-info">
+                <strong>${friend.name || friend.email}</strong>
+                <small>${friend.email}</small>
+              </div>
+            `;
+          resultsContainer.appendChild(card);
+        });
+
+      } catch (err) {
+        console.error("Error searching for user:", err);
+        resultsContainer.innerHTML = '<p class="text-sm text-danger">Error finding user. Please try again.</p>';
+      }
+    }
+
+    function startChatFromSearch(event, friendUid, friendJson) {
+      event.preventDefault();
+      const friend = JSON.parse(friendJson);
+      const chatId = [currentUser.uid, friendUid].sort().join("_");
+      closeNewChat();
+
+      // When we start a chat from search, we must ensure it's un-archived
+      // and the unread count is reset. Calling openChat handles both.
+      openChat(chatId, friend);
+    }
+
+    // --- Chat Room Functions ---
+
+    function openChat(chatId, friendOrGroupData) {
+      if (!currentUser) { return; }
+
+      // 1. Setup Variables
+      const isGroup = friendOrGroupData.type === 'group';
+      const chatName = friendOrGroupData.name || friendOrGroupData.email || friendOrGroupData.groupName;
+      const chatPhoto = friendOrGroupData.photoURL || friendOrGroupData.groupImage;
+
+      // 2. Database Updates (Reset unread count & un-archive)
+      const chatRef = db.collection('chats').doc(chatId);
+      const myUnreadCountField = `unreadCounts.${currentUser.uid}`;
+
+      // Reset unread count logic
+      chatRef.set({
+        members: isGroup
+          ? friendOrGroupData.members
+          : [currentUser.uid, friendOrGroupData.uid],
+        [myUnreadCountField]: 0,
+        lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true }).catch(err => console.log("Note: No unread count to clear."));
+
+      // Un-archive logic
+      chatRef.set({
+        archivedBy: firebase.firestore.FieldValue.arrayRemove(currentUser.uid)
+      }, { merge: true }).catch(err => console.log("Note: Could not un-archive chat."));
+
+      // 3. UI Setup
+      currentChatId = chatId;
+      inbox.style.display = "none";
+      chatBox.style.display = "flex";
+      inputArea.style.display = "flex";
+      chatBox.innerHTML = "";
+      document.getElementById('topIcons').style.display = 'none';
+
+      // 4. Render Header (Clickable for Info)
+      const defaultIcon = isGroup ? '👥' : '👤';
+      const headerProfilePicHtml = chatPhoto
+        ? `<img class="header-profile-pic" src="${chatPhoto}" alt="Pic">`
+        : `<div class="header-profile-pic bg-gray-700 flex items-center justify-center text-lg">${defaultIcon}</div>`;
+
+      document.querySelector('.logo').innerHTML = `
+    <button class="back-btn" onclick="backToInbox()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Back
+    </button>
+    
+    <div class="chat-header-clickable" onclick="showChatDetails()" title="View Info" style="display:flex; align-items:center; cursor:pointer;">
+        ${headerProfilePicHtml}
+        <span style="margin-left: 10px;">${chatName}</span>
+    </div>
+  `;
+
+      if (unsubscribeMsgs) unsubscribeMsgs();
+
+      // 5. Message Listener
+      const messagesRef = db.collection("chats").doc(chatId).collection("messages");
+      unsubscribeMsgs = messagesRef
+        .orderBy("timestamp")
+        .onSnapshot((snapshot) => {
+          snapshot.docChanges().forEach(change => {
+            const docId = change.doc.id;
+            const m = change.doc.data();
+            let messageDiv = document.querySelector(`[data-id="${docId}"]`);
+
+            // A. Mark as Seen Logic
+            if (change.type === "added" && m.sender !== currentUser.uid && m.status !== 'seen') {
+              messagesRef.doc(docId).update({ status: 'seen' });
+              chatRef.update({ [myUnreadCountField]: 0 }).catch(() => { });
+            }
+
+            if (change.type === "added" || change.type === "modified") {
+              if (!messageDiv) {
+                messageDiv = document.createElement("div");
+                messageDiv.setAttribute('data-id', docId);
+                chatBox.appendChild(messageDiv);
+              }
+
+              // B. SYSTEM MESSAGE RENDERING (WhatsApp Style)
+              if (m.type === 'system') {
+                messageDiv.className = "message system";
+
+                // Replace my name with "You" for better UX
+                let displayText = m.text || '';
+                if (m.sender === currentUser.uid) {
+                  // Simple replace to make it feel personal
+                  displayText = displayText.replace(currentUser.name, "You");
+                }
+                messageDiv.innerHTML = `<span>${displayText}</span>`;
+              }
+              // C. REGULAR MESSAGE RENDERING
+              else {
+                messageDiv.className = "message" + (m.sender === currentUser.uid ? " self" : "");
+
+                // Show Name if Group AND not me
+                const senderNameHtml = (isGroup && m.sender !== currentUser.uid)
+                  ? `<div class="sender-name">${m.senderName || 'Unknown'}</div>`
+                  : '';
+
+                // Content Type Switch
+                let messageBody = '';
+                switch (m.type) {
+                  case 'image':
+                    messageBody = `<img src="${m.fileURL}" alt="${m.fileName}" onclick="window.open('${m.fileURL}', '_blank')">`;
+                    break;
+                  case 'audio':
+                    messageBody = `<audio controls src="${m.fileURL}"></audio>`;
+                    break;
+                  case 'file':
+                    messageBody = `<a href="${m.fileURL}" target="_blank" download="${m.fileName}" class="file-attachment">
+                                  <div class="file-attachment-icon">
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                                  </div>
+                                  <div class="file-attachment-info">
+                                      <span>${m.fileName || 'File'}</span>
+                                      <small>${m.fileSize ? (m.fileSize / 1024).toFixed(1) + ' KB' : ''}</small>
+                                  </div>
+                                </a>`;
+                    break;
+                  default:
+                    messageBody = `<div>${m.text || ''}</div>`;
+                }
+                if (m.audio && !m.type) { messageBody = `<audio controls src="${m.audio}"></audio>`; }
+
+                // Reactions
+                let reactionsHtml = '';
+                if (m.reactions) {
+                  const reactionCounts = {};
+                  Object.values(m.reactions).forEach(emoji => {
+                    reactionCounts[emoji] = (reactionCounts[emoji] || 0) + 1;
+                  });
+                  if (Object.keys(reactionCounts).length > 0) {
+                    reactionsHtml = `<div class="reaction-container">`;
+                    for (const [emoji, count] of Object.entries(reactionCounts)) {
+                      reactionsHtml += `<span class="reaction-bubble">${emoji} ${count > 1 ? count : ''}</span>`;
+                    }
+                    reactionsHtml += `</div>`;
+                  }
+                }
+
+                // Reply Quote
+                let replyHtml = '';
+                if (m.replyTo) {
+                  replyHtml = `
+               <div class="quoted-message" onclick="scrollToMessage('${m.replyTo.id}')">
+                   <strong>${m.replyTo.senderName}</strong>
+                   <span>${m.replyTo.text}</span>
+               </div>`;
+                }
+
+                // Receipts (Ticks)
+                let receiptHtml = '';
+                if (m.sender === currentUser.uid) {
+                  if (m.status === 'seen') {
+                    receiptHtml = `<svg class="receipt-ticks receipt-seen" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline><path d="M16 11.08V12a6 6 0 1 1-3.53-5.65"></path><polyline points="16 4 10 10.01 8 8.01"></polyline></svg>`;
+                  } else {
+                    receiptHtml = `<svg class="receipt-ticks receipt-sent" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
+                  }
+                }
+
+                // FINAL HTML ASSEMBLY
+                messageDiv.innerHTML = `
+                   <div class="msg-options" style="align-items: center;">
+                       <span class="option-btn reply-action" title="Reply" onclick="initiateReply('${docId}', '${m.text || 'Media'}', '${m.senderName}')">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 10 4 15 9 20"></polyline><path d="M20 4v7a4 4 0 0 1-4 4H4"></path></svg>
+                       </span>
+                       <div class="separator"></div>
+                       <span class="option-btn emoji-action" onclick="addReaction('${docId}', '❤️')">❤️</span>
+                       <span class="option-btn emoji-action" onclick="addReaction('${docId}', '😂')">😂</span>
+                       <span class="option-btn emoji-action" onclick="addReaction('${docId}', '👍')">👍</span>
+                       ${m.sender === currentUser.uid ? `
+                           <div class="separator"></div>
+                           <span class="option-btn delete-action" title="Delete" onclick="confirmDeleteMessage('${chatId}', '${docId}')">
+                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                           </span>
+                       ` : ''}
+                   </div>
+
+                   <div class="message-content">
+                       ${senderNameHtml}
+                       ${replyHtml} 
+                       ${messageBody} 
+                       ${reactionsHtml} 
+                       <div class="receipt-area">
+                           <span class="timestamp">${formatTimestamp(m.timestamp)}</span>
+                           ${receiptHtml}
+                       </div>
+                   </div>
+               `;
+              } // End Regular Message Else
+            }
+            else if (change.type === "removed") {
+              if (messageDiv) { messageDiv.remove(); }
+            }
+          });
+          chatBox.scrollTop = chatBox.scrollHeight;
+        }, (error) => {
+          console.error("Error fetching messages:", error);
+          showAlert("Failed to load chat messages.");
+        });
+
+      // 6. Typing Indicator
+      const typingDiv = document.getElementById("typingIndicator");
+      if (!isGroup) {
+        db.collection("chats").doc(chatId).collection("typing").doc(friendOrGroupData.uid)
+          .onSnapshot(doc => {
+            const data = doc.data();
+            if (data && data.typing) {
+              typingDiv.innerHTML = `<span>${friendOrGroupData.name} is typing</span><span class="typing-dots"><span></span><span></span><span></span></span>`;
+            } else {
+              typingDiv.textContent = "";
+            }
+          });
+      } else {
+        typingDiv.textContent = ""; // Clear for groups
+      }
+    }
+
+    function initiateReply(id, text, senderName) {
+      isReplying = true;
+      replyToData = { id, text, senderName };
+
+      const preview = document.getElementById('replyPreview');
+      const content = document.getElementById('replyContent');
+
+      content.innerHTML = `<strong>Replying to ${senderName}</strong><span>${text}</span>`;
+      preview.style.display = 'flex';
+      document.getElementById('messageInput').focus();
+    }
+
+    function cancelReply() {
+      isReplying = false;
+      replyToData = null;
+      document.getElementById('replyPreview').style.display = 'none';
+    }
+
+    // --- Reaction Functions ---
+
+    function addReaction(messageId, emoji) {
+      if (!currentChatId || !currentUser) return;
+
+      const msgRef = db.collection('chats').doc(currentChatId).collection('messages').doc(messageId);
+
+      // We use a Map: { "userId": "emoji" }
+      // This ensures one reaction per user per message
+      const field = `reactions.${currentUser.uid}`;
+
+      msgRef.update({
+        [field]: emoji
+      }).catch(err => console.error("Error adding reaction:", err));
+    }
+
+    function scrollToMessage(messageId) {
+      const el = document.querySelector(`[data-id="${messageId}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.background = 'rgba(255,255,255,0.1)'; // Flash effect
+        setTimeout(() => el.style.background = '', 1000);
+      }
+    }
+
+
+    function backToInbox() {
+      currentChatId = null;
+      if (unsubscribeMsgs) unsubscribeMsgs();
+
+      chatBox.style.display = "none";
+      inputArea.style.display = "none";
+      inbox.style.display = "flex";
+      document.getElementById('topIcons').style.display = 'flex';
+
+      document.querySelector('.logo').innerHTML = `
+        <span class="logo-icon">💬</span>
+        <span>ConnectHub</span>
+      `;
+      document.getElementById("typingIndicator").textContent = "";
+
+      // We NO LONGER call setupInboxListener() here. It runs persistently.
+    }
+
+    // --- Sending Functions ---
+
+    async function sendMessage() {
+      const text = msgInput.value.trim();
+      if (!text || !currentChatId) return;
+
+      const sendBtn = document.querySelector('.send-btn');
+      // Loading State
+      sendBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
+      sendBtn.disabled = true;
+
+      // 1. Prepare the message object
+      const messageData = {
+        sender: currentUser.uid,
+        senderName: currentUser.name,
+        text,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        type: 'text',
+        status: 'sent'
+      };
+
+      // 2. Check if we are replying to someone
+      // 'isReplying' and 'replyToData' are the global variables we added earlier
+      if (isReplying && replyToData) {
+        messageData.replyTo = {
+          id: replyToData.id,
+          text: replyToData.text,
+          senderName: replyToData.senderName
+        };
+      }
+
+      // 3. Send to Firestore
+      db.collection("chats").doc(currentChatId).collection("messages").add(messageData)
+        .then(() => {
+          // Reset button state
+          sendBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
+          setTimeout(() => { sendBtn.disabled = false; }, 500);
+        })
+        .catch(error => {
+          console.error('Error sending message:', error);
+          showAlert('Failed to send message');
+          sendBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
+          sendBtn.disabled = false;
+        });
+
+      // 4. Update Unread Counts
+      try {
+        const chatDoc = await db.collection("chats").doc(currentChatId).get();
+        const members = chatDoc.data().members;
+        const friendUid = members.find(uid => uid !== currentUser.uid);
+        const friendUnreadCountField = `unreadCounts.${friendUid}`;
+
+        await db.collection("chats").doc(currentChatId).update({
+          lastUpdate: firebase.firestore.FieldValue.serverTimestamp(),
+          [friendUnreadCountField]: firebase.firestore.FieldValue.increment(1)
+        });
+      } catch (err) { console.error("Error updating unread count:", err); }
+
+      // 5. Cleanup UI
+      msgInput.value = "";
+      cancelReply(); // <--- IMPORTANT: Hide the reply preview bar
+      updateTypingStatus(false);
+    }
+
+    function updateTypingStatus(isTyping) {
+      if (!currentChatId) return;
+      db.collection("chats").doc(currentChatId).collection("typing").doc(currentUser.uid).set({
+        typing: isTyping,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    async function sendFile(file) {
+      if (!file || !currentChatId) return;
+      showAlert(`Uploading ${file.type.startsWith('image/') ? 'image' : 'file'}...`, false);
+
+      try {
+        const fileRef = storage.ref(`uploads/${currentChatId}/${Date.now()}_${file.name}`);
+        const uploadTask = await fileRef.put(file, { contentType: file.type });
+        const downloadURL = await uploadTask.ref.getDownloadURL();
+
+        const messageData = {
+          sender: currentUser.uid,
+          senderName: currentUser.name,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          type: file.type.startsWith('image/') ? 'image' : 'file',
+          fileURL: downloadURL,
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          status: 'sent' // Add status here too
+        };
+        await db.collection("chats").doc(currentChatId).collection("messages").add(messageData);
+
+        const chatDoc = await db.collection("chats").doc(currentChatId).get();
+        const members = chatDoc.data().members;
+        const friendUid = members.find(uid => uid !== currentUser.uid);
+        const friendUnreadCountField = `unreadCounts.${friendUid}`;
+
+        await db.collection("chats").doc(currentChatId).update({
+          lastUpdate: firebase.firestore.FieldValue.serverTimestamp(),
+          [friendUnreadCountField]: firebase.firestore.FieldValue.increment(1)
+        });
+        closeAlert();
+      } catch (error) {
+        console.error("Error sending file:", error);
+        showAlert("Failed to send file: " + error.message);
+      }
+      finally { document.getElementById('fileInput').value = ''; }
+    }
+
+    async function sendVoiceMessage(audioBlob) {
+      if (!audioBlob || !currentChatId) return;
+      closeAlert();
+      showAlert('Uploading voice message...', false);
+
+      try {
+        const fileName = `voice_${Date.now()}.webm`;
+        const fileRef = storage.ref(`audio/${currentChatId}/${fileName}`);
+        const uploadTask = await fileRef.put(audioBlob, { contentType: 'audio/webm' });
+        const downloadURL = await uploadTask.ref.getDownloadURL();
+
+        const messageData = {
+          sender: currentUser.uid,
+          senderName: currentUser.name,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          type: 'audio',
+          fileURL: downloadURL,
+          fileName: fileName,
+          fileSize: audioBlob.size,
+          fileType: audioBlob.type,
+          status: 'sent' // Add status here too
+        };
+        await db.collection("chats").doc(currentChatId).collection("messages").add(messageData);
+
+        const chatDoc = await db.collection("chats").doc(currentChatId).get();
+        const members = chatDoc.data().members;
+        const friendUid = members.find(uid => uid !== currentUser.uid);
+        const friendUnreadCountField = `unreadCounts.${friendUid}`;
+
+        await db.collection("chats").doc(currentChatId).update({
+          lastUpdate: firebase.firestore.FieldValue.serverTimestamp(),
+          [friendUnreadCountField]: firebase.firestore.FieldValue.increment(1)
+        });
+        closeAlert();
+      } catch (error) {
+        console.error("Error sending voice message:", error);
+        showAlert("Failed to send voice message: " + error.message);
+      }
+    }
+
+    function toggleRecording() {
+      if (isRecording) {
+        mediaRecorder.stop();
+        recordBtn.classList.remove('recording');
+        recordBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>`;
+        isRecording = false;
+        return;
+      }
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(audioChunks, { type: 'audio/webm' });
+          sendVoiceMessage(blob);
+          stream.getTracks().forEach(track => track.stop());
+        };
+        mediaRecorder.start();
+        isRecording = true;
+        recordBtn.classList.add('recording');
+        recordBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16" rx="1"></rect><rect x="14" y="4" width="4" height="16" rx="1"></rect></svg>`;
+        showAlert("Recording voice message... Click again to stop.");
+      }).catch(error => { showAlert('Could not access microphone: ' + error.message); });
+    }
+
+    function confirmDeleteMessage(chatId, messageId) {
+      const confirmationHtml = `
+        <div style="margin-bottom: 1rem;">Are you sure you want to delete this message? This will be removed for everyone.</div>
+        <div class="alert-buttons">
+          <button class="alert-btn danger" onclick="deleteMessageNow('${chatId}', '${messageId}')">Yes, Delete</button>
+          <button class="alert-btn secondary" onclick="closeAlert()">Cancel</button>
+        </div>
+      `;
+      showAlert(confirmationHtml, true);
+    }
+
+    async function deleteMessageNow(chatId, messageId) {
+      if (!chatId || !messageId) return;
+      try {
+        await db.collection('chats').doc(chatId).collection('messages').doc(messageId).delete();
+        await db.collection('chats').doc(chatId).update({
+          lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        closeAlert();
+      } catch (error) {
+        console.error("Error deleting message:", error);
+        showAlert("Failed to delete message. Please try again.");
+      }
+    }
+
+    function archiveChat(event, chatId) {
+      event.stopPropagation();
+      if (!chatId || !currentUser) return;
+      const chatRef = db.collection('chats').doc(chatId);
+      chatRef.update({
+        archivedBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
+      }).catch(err => {
+        console.error("Error archiving chat:", err);
+        showAlert("Could not archive chat. Please try again.");
+      });
+    }
+
+    // --- Settings Functions ---
+
+    function openSettings() {
+      document.getElementById('newUsername').value = currentUser.name || '';
+      document.getElementById('settingsUserPhoto').src = currentUser.photoURL || 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+      document.getElementById('settingsOverlay').style.display = 'block';
+    }
+
+    function closeSettings() {
+      document.getElementById('settingsOverlay').style.display = 'none';
+    }
+
+    function applyUsername() {
+      const newName = document.getElementById('newUsername').value.trim();
+      if (!newName) return showAlert('Username cannot be empty');
+
+      const saveBtn = event.target;
+      saveBtn.classList.add('loading');
+      saveBtn.innerHTML = 'Saving...';
+
+      db.collection('users').doc(currentUser.uid).update({ name: newName })
+        .then(() => {
+          currentUser.name = newName;
+          saveBtn.classList.remove('loading');
+          saveBtn.classList.add('success');
+          saveBtn.innerHTML = 'Saved!';
+
+          setTimeout(() => {
+            saveBtn.classList.remove('success');
+            saveBtn.innerHTML = 'Save Username';
+            closeSettings();
+            // We call setupInboxListener() to force a re-render with the new name
+            setupInboxListener();
+          }, 1000);
+        })
+        .catch(err => {
+          saveBtn.classList.remove('loading');
+          saveBtn.innerHTML = 'Save Username';
+          showAlert('Error updating username: ' + err.message);
+        });
+    }
+
+    function triggerProfileUpload() {
+      document.getElementById('profileFileInput').click();
+    }
+    // This global variable will temporarily hold the file for confirmation
+    let temporaryFile = null;
+
+    /**
+     * Step 1: Called by the file input. Reads the file and shows a preview alert.
+     */
+    function previewProfilePhoto(file) {
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        // We call showAlert with isHTML=false, so the OK button will appear
+        showAlert("Please select an image file.", false);
+        return;
+      }
+
+      temporaryFile = file;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const previewUrl = e.target.result;
+
+        // This HTML contains its OWN buttons, so the default "OK" is hidden
+        const confirmationHtml = `
+            <div style="text-align: center;"> 
+                <h4 style="color: white; margin-bottom: 1rem;">Use this photo?</h4>
+                
+                <img src="${previewUrl}" style="width: 120px; height: 120px; border-radius: 50%; margin: 0 auto 1.5rem auto; object-fit: cover; border: 2px solid var(--primary); display: block;">
+                
+                <div class="alert-buttons" style="gap: 0.75rem; justify-content: center; display: flex;">
+                    <button class="alert-btn secondary" onclick="cancelProfileUpload()">Cancel</button>
+                    <button class="alert-btn primary" onclick="confirmProfileUpload()">Yes, Confirm</button>
+                </div>
+            </div>
+        `;
+
+        // We call showAlert with isHTML=true, so the default OK button is hidden
+        showAlert(confirmationHtml, true);
+      };
+
+      reader.readAsDataURL(file);
+      document.getElementById('profileFileInput').value = null;
+    }
+
+    /**
+     * Step 2: Called by the "Cancel" button in the alert.
+     */
+    function cancelProfileUpload() {
+      temporaryFile = null;
+      closeAlert();
+    }
+
+    /**
+     * Step 3: Called by the "Yes, Confirm" button in the alert.
+     */
+    function confirmProfileUpload() {
+      if (temporaryFile) {
+        closeAlert(); // Close the confirmation box
+
+        // NOW we call the original upload function with the file
+        uploadProfilePhoto(temporaryFile);
+
+        temporaryFile = null; // Clear the temporary file
+      }
+    }
+
+    async function uploadProfilePhoto(file) {
+      if (!file) return;
+
+      // Basic validation
+      if (!file.type.startsWith('image/')) {
+        showAlert("Please select an image file.");
+        return;
+      }
+
+      // Show loading state
+      const img = document.getElementById('settingsUserPhoto');
+      img.style.opacity = '0.5';
+      showAlert("Uploading new profile picture...", false);
+
+      try {
+        // 1. Upload to Firebase Storage
+        const fileRef = storage.ref(`profile_pics/${currentUser.uid}`);
+        await fileRef.put(file);
+
+        // 2. Get the new URL
+        const photoURL = await fileRef.getDownloadURL();
+
+        // 3. Update Firestore User Profile
+        await db.collection('users').doc(currentUser.uid).update({
+          photoURL: photoURL
+        });
+
+        // 4. Update Local State & UI
+        currentUser.photoURL = photoURL;
+        document.getElementById('settingsUserPhoto').src = photoURL;
+
+        // Also update the header image immediately
+        const headerImg = document.querySelector('.header-profile-pic');
+        if (headerImg) headerImg.src = photoURL;
+
+        closeAlert();
+        img.style.opacity = '1';
+
+        // Success feedback
+        const saveBtn = document.querySelector('#settingsOverlay .modal-btn');
+        const oldText = saveBtn.innerText;
+        saveBtn.innerText = "Photo Updated!";
+        saveBtn.classList.add('success');
+        setTimeout(() => {
+          saveBtn.innerText = oldText;
+          saveBtn.classList.remove('success');
+        }, 2000);
+
+      } catch (error) {
+        console.error("Error uploading profile pic:", error);
+        showAlert("Failed to update photo: " + error.message);
+        img.style.opacity = '1';
+      }
+    }
+
+    // --- DELETE your old setupFCM function and REPLACE it with this: ---
+
+    async function setupFCM() {
+      // 1. Check if service workers are supported
+      if ('serviceWorker' in navigator) {
+        try {
+          // 2. Manually register our service worker file
+          const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+          console.log('Service Worker registered successfully!', registration);
+
+          // 3. Wait for the service worker to be fully active
+          await navigator.serviceWorker.ready;
+          console.log('Service Worker is active.');
+
+          // 4. NOW it's safe to get the token.
+          // We pass the registration to getToken() to be explicit.
+          const token = await messaging.getToken({ serviceWorkerRegistration: registration });
+
+          if (token) {
+            console.log("FCM Token:", token);
+            saveTokenToFirestore(token);
+          } else {
+            // This happens if the user clicks "Block"
+            console.warn("No FCM token available. Permission was denied.");
+            if (Notification.permission === 'denied') {
+              showAlert("You have blocked notifications. To enable them, check your browser site settings.", false);
+            }
+          }
+        } catch (err) {
+          // This will catch any error during registration or getToken
+          console.error("Service Worker registration or getToken failed:", err);
+        }
+      } else {
+        console.error("Service workers are not supported in this browser.");
+      }
+    }
+
+    async function showChatDetails() {
+      if (!currentChatId) return;
+
+      // 1. Get DOM Elements
+      const modal = document.getElementById('chatInfoOverlay');
+      const imgEl = document.getElementById('infoModalImage');
+      const nameEl = document.getElementById('infoModalName');
+      const subEl = document.getElementById('infoModalSubtitle');
+      const membersSection = document.getElementById('infoMembersSection');
+      const membersList = document.getElementById('infoMembersList');
+      const leaveBtn = document.getElementById('leaveGroupBtn');
+      const addBtn = document.getElementById('addMemberBtn');
+
+      // 2. Reset UI
+      modal.style.display = 'block';
+      nameEl.innerText = "Loading...";
+      membersSection.style.display = 'none';
+      leaveBtn.style.display = 'none';
+      addBtn.style.display = 'none';
+
+      try {
+        const chatDoc = await db.collection('chats').doc(currentChatId).get();
+        const chatData = chatDoc.data();
+
+        if (chatData.type === 'group') {
+          // --- GROUP VIEW ---
+          imgEl.src = chatData.groupImage || 'https://placehold.co/100x100/6366f1/ffffff?text=G';
+          nameEl.innerText = chatData.groupName;
+          subEl.innerText = `${chatData.members.length} members`;
+
+          membersSection.style.display = 'block';
+          leaveBtn.style.display = 'block';
+          addBtn.style.display = 'block';
+
+          // Admin Logic
+          const myId = currentUser.uid;
+          const adminList = chatData.admin || [];
+          const amIAdmin = adminList.includes(myId);
+
+          membersList.innerHTML = '<div style="color:gray; padding:1rem;">Loading members...</div>';
+
+          const memberPromises = chatData.members.map(uid => db.collection('users').doc(uid).get());
+          const memberDocs = await Promise.all(memberPromises);
+
+          let html = '';
+          memberDocs.forEach(doc => {
+            if (doc.exists) {
+              const u = doc.data();
+              const uid = doc.id;
+              const isMe = uid === myId;
+              const pic = u.photoURL || `https://ui-avatars.com/api/?name=${u.name}&background=random`;
+
+              // Check if this specific user is an admin
+              const isUserAdmin = adminList.includes(uid);
+
+              // Badge
+              const adminBadge = isUserAdmin
+                ? '<span style="color:#fbbf24; font-size:0.7rem; border:1px solid #fbbf24; padding:0 4px; border-radius:4px; margin-left:6px;">ADMIN</span>'
+                : '';
+              const youTag = isMe ? ' <span style="color:var(--gray);">(You)</span>' : '';
+
+              // BUTTONS LOGIC
+              let buttonsHtml = '';
+
+              // If I am Admin...
+              if (amIAdmin && !isMe) {
+                // 1. Kick Button (Always show for non-me)
+                buttonsHtml += `
+               <button onclick="kickMemberFromGroup('${uid}', '${u.name || 'User'}')" 
+                       style="background:none; border:1px solid #ef4444; color:#ef4444; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem; margin-left:5px;">
+                   Kick
+               </button>
+             `;
+
+                // 2. Make Admin Button (Only if they are NOT already admin)
+                if (!isUserAdmin) {
+                  buttonsHtml = `
+                 <button onclick="makeGroupAdmin('${uid}', '${u.name || 'User'}')" 
+                         style="background:none; border:1px solid #10b981; color:#10b981; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem; margin-left:auto;">
+                     Promote
+                 </button>` + buttonsHtml;
+                } else {
+                  // Push Kick button to far right if alone
+                  buttonsHtml = `<div style="margin-left:auto">${buttonsHtml}</div>`;
+                }
+              }
+
+              html += `
+            <div class="member-item" style="display: flex; align-items: center; gap: 10px; padding: 8px 0;">
+              <img src="${pic}" style="width: 36px; height: 36px; border-radius: 50%;">
+              <div style="display:flex; flex-direction:column;">
+                <div style="color:white; font-weight:500; display:flex; align-items:center;">
+                    ${u.name || 'User'} ${youTag} ${adminBadge}
+                </div>
+                <div style="color:gray; font-size:0.75rem;">${u.email}</div>
+              </div>
+              ${buttonsHtml}
+            </div>
+          `;
+            }
+          });
+          membersList.innerHTML = html;
+
+        } else {
+          // --- DIRECT VIEW ---
+          const friendId = chatData.members.find(id => id !== currentUser.uid);
+          const userDoc = await db.collection('users').doc(friendId).get();
+          const user = userDoc.data();
+          imgEl.src = user.photoURL || `https://ui-avatars.com/api/?name=${user.name}&background=random`;
+          nameEl.innerText = user.name;
+          subEl.innerText = user.email;
+        }
+
+      } catch (error) {
+        console.error(error);
+        nameEl.innerText = "Error loading info";
+      }
+    }
+
+    async function makeGroupAdmin(targetUid, targetName) {
+      if (!confirm(`Make ${targetName} an Admin?`)) return;
+
+      try {
+        // 1. Add to admin array
+        await db.collection('chats').doc(currentChatId).update({
+          admin: firebase.firestore.FieldValue.arrayUnion(targetUid)
+        });
+
+        // 2. System Message
+        await db.collection('chats').doc(currentChatId).collection('messages').add({
+          sender: currentUser.uid,
+          senderName: currentUser.name,
+          text: `${currentUser.name} promoted ${targetName} to Admin`,
+          type: "system",
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          status: 'sent'
+        });
+
+        alert(`${targetName} is now an Admin.`);
+        showChatDetails(); // Refresh UI
+
+      } catch (e) {
+        console.error(e);
+        alert("Error promoting member.");
+      }
+    }
+
+    async function kickMemberFromGroup(targetUid, targetName) {
+      if (!confirm(`Are you sure you want to remove ${targetName} from the group?`)) return;
+
+      try {
+        // 1. Remove from 'members' array
+        await db.collection('chats').doc(currentChatId).update({
+          members: firebase.firestore.FieldValue.arrayRemove(targetUid)
+        });
+
+        // 2. Send "User Removed" System Message
+        await db.collection('chats').doc(currentChatId).collection('messages').add({
+          sender: currentUser.uid,
+          senderName: currentUser.name,
+          text: `${currentUser.name} removed ${targetName}`,
+          type: "system",
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          status: 'sent'
+        });
+
+        // 3. Refresh the List
+        alert(`${targetName} has been removed.`);
+        showChatDetails(); // Reloads the modal to update the list
+
+      } catch (e) {
+        console.error(e);
+        alert("Error removing member.");
+      }
+    }
+
+    async function leaveCurrentGroup() {
+      if (!confirm("Are you sure you want to leave this group?")) return;
+
+      const btn = document.getElementById('leaveGroupBtn');
+      btn.innerText = "Leaving...";
+      btn.disabled = true;
+
+      try {
+        const chatRef = db.collection('chats').doc(currentChatId);
+
+        // 1. Check Admin Status BEFORE leaving
+        const doc = await chatRef.get();
+        const data = doc.data();
+        const adminList = data.admin || [];
+        const memberList = data.members || [];
+
+        // Am I an admin?
+        if (adminList.includes(currentUser.uid)) {
+          // Am I the ONLY admin?
+          if (adminList.length === 1 && memberList.length > 1) {
+            // Find a successor (anyone who isn't me)
+            const successor = memberList.find(uid => uid !== currentUser.uid);
+
+            if (successor) {
+              // Auto-promote them
+              await chatRef.update({
+                admin: firebase.firestore.FieldValue.arrayUnion(successor)
+              });
+
+              // Optional: Announce it
+              await chatRef.collection('messages').add({
+                sender: currentUser.uid,
+                senderName: "System",
+                text: `Admin rights transferred to new member`,
+                type: "system",
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+              });
+            }
+          }
+        }
+
+        // 2. Send "Left Group" message
+        await chatRef.collection('messages').add({
+          sender: currentUser.uid,
+          senderName: currentUser.name,
+          text: `${currentUser.name} left the group`,
+          type: "system",
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          status: 'sent'
+        });
+
+        // 3. Remove self from members (and admin list)
+        await chatRef.update({
+          members: firebase.firestore.FieldValue.arrayRemove(currentUser.uid),
+          admin: firebase.firestore.FieldValue.arrayRemove(currentUser.uid)
+        });
+
+        // 4. Close UI
+        document.getElementById('chatInfoOverlay').style.display = 'none';
+        backToInbox();
+        showAlert("You have left the group.");
+
+      } catch (e) {
+        console.error(e);
+        showAlert("Error leaving group.");
+        btn.innerText = "Leave Group";
+        btn.disabled = false;
+      }
+    }
+
+    async function addGroupMemberByEmail() {
+      const emailInput = document.getElementById('groupManualEmail');
+      const email = emailInput.value.trim().toLowerCase();
+
+      if (!email) return;
+      if (email === currentUser.email) {
+        alert("You are already in the group!");
+        return;
+      }
+
+      // Check if already in our staging list
+      if (groupStagingUsers.find(u => u.email === email)) {
+        alert("User already selected!");
+        emailInput.value = '';
+        return;
+      }
+
+      try {
+        const snapshot = await db.collection('users').where('email', '==', email).get();
+
+        if (snapshot.empty) {
+          alert("User not found!");
+          return;
+        }
+
+        const user = snapshot.docs[0].data();
+        user.uid = snapshot.docs[0].id;
+
+        // 1. Render them into the list (Prepend to top so you see them)
+        const container = document.getElementById('suggestedFriendsList');
+
+        // Create the item using your existing logic, but we need to trick it to be selected
+        renderFriendItem(user, true); // Pass 'true' to indicate auto-select
+
+        // 2. Clear input
+        emailInput.value = '';
+
+        // 3. Scroll to top to see the new addition
+        container.scrollTop = 0;
+
+      } catch (e) {
+        console.error(e);
+        alert("Error finding user.");
+      }
+    }
+
+    // 1. Open the Modal & Load Friends
+    async function addNewMemberToGroup() {
+      const modal = document.getElementById('addMemberOverlay');
+      const listContainer = document.getElementById('addMemberListContainer');
+
+      modal.style.display = 'block';
+      listContainer.innerHTML = '<div style="color: gray; text-align: center; padding: 1rem;">Loading potential members...</div>';
+      document.getElementById('addMemberFilter').value = '';
+      document.getElementById('manualAddEmail').value = '';
+      addMemberSelection = [];
+      updateAddButtonLabel();
+
+      try {
+        // A. Get Current Group Members (to exclude them)
+        const chatDoc = await db.collection('chats').doc(currentChatId).get();
+        const currentMemberIds = chatDoc.data().members;
+
+        // B. Get Recent Chats (Your Inbox)
+        const inboxSnap = await db.collection('chats')
+          .where('members', 'array-contains', currentUser.uid)
+          .orderBy('lastUpdate', 'desc')
+          .limit(50) // Increased limit to ensure we find friends even if you have many groups
+          .get();
+
+        const friendIds = new Set();
+
+        // C. Filter: Find friends who are NOT in the group yet
+        inboxSnap.forEach(doc => {
+          const data = doc.data();
+          if (data.type !== 'group') {
+            const friendId = data.members.find(id => id !== currentUser.uid);
+            if (friendId && !currentMemberIds.includes(friendId)) {
+              friendIds.add(friendId);
+            }
+          }
+        });
+
+        if (friendIds.size === 0) {
+          listContainer.innerHTML = '<div style="color: gray; text-align: center; padding: 1rem;">All your recent friends are already here! <br><small>Use the email search below to add new people.</small></div>';
+          return;
+        }
+
+        // D. Render the List
+        listContainer.innerHTML = '';
+        friendIds.forEach(async (uid) => {
+          const userDoc = await db.collection('users').doc(uid).get();
+          if (userDoc.exists) {
+            renderAddMemberItem(userDoc.data(), uid, listContainer);
+          }
+        });
+
+      } catch (e) {
+        console.error(e);
+        listContainer.innerHTML = 'Error loading friends.';
+      }
+    }
+    // Helper function to render each friend in the list
+    function renderAddMemberItem(user, uid, container) {
+      const div = document.createElement('div');
+      const pic = user.photoURL || `https://ui-avatars.com/api/?name=${user.name}&background=random`;
+
+      // Reusing the same styling class as the "Create Group" list
+      div.className = 'friend-item';
+      div.dataset.name = (user.name || user.email).toLowerCase();
+
+      div.innerHTML = `
+      <img src="${pic}">
+      <div class="info">
+          <h4>${user.name || 'Unknown'}</h4>
+          <small>${user.email}</small>
+      </div>
+      <div class="friend-checkbox"></div>
+  `;
+
+      // Click handler to toggle selection
+      div.onclick = () => {
+        if (div.classList.contains('selected')) {
+          div.classList.remove('selected');
+          // Remove from selection array
+          addMemberSelection = addMemberSelection.filter(u => u.uid !== uid);
+        } else {
+          div.classList.add('selected');
+          // Add to selection array
+          addMemberSelection.push({ uid, name: user.name, email: user.email });
+        }
+        updateAddButtonLabel();
+      };
+
+      container.appendChild(div);
+    }
+
+    // Helper to update the button text (e.g., "Add Selected (2)")
+    function updateAddButtonLabel() {
+      const btn = document.getElementById('confirmAddMembersBtn');
+      if (btn) {
+        btn.innerText = `Add Selected (${addMemberSelection.length})`;
+        btn.disabled = addMemberSelection.length === 0;
+      }
+    }
+
+    // 2. Render Individual Items (Reusing your CSS classes)
+    function renderFriendItem(user, autoSelect = false) {
+      const container = document.getElementById('suggestedFriendsList');
+
+      // Prevent duplicates in the visual list
+      if (document.querySelector(`.friend-item[data-uid="${user.uid}"]`)) {
+        if (autoSelect) alert("User is already in the list!");
+        return;
+      }
+
+      const div = document.createElement('div');
+      const pic = user.photoURL || `https://ui-avatars.com/api/?name=${user.name}&background=random`;
+
+      div.className = 'friend-item';
+      div.dataset.uid = user.uid; // Helpful for duplicate checking
+      div.dataset.name = (user.name || user.email).toLowerCase();
+
+      div.innerHTML = `
+      <img src="${pic}">
+      <div class="info">
+          <h4>${user.name || 'Unknown'}</h4>
+          <small>${user.email}</small>
+      </div>
+      <div class="friend-checkbox"></div>
+  `;
+
+      // Toggle Function
+      const toggleSelection = () => {
+        const isSelected = div.classList.contains('selected');
+        if (isSelected) {
+          div.classList.remove('selected');
+          groupStagingUsers = groupStagingUsers.filter(u => u.uid !== user.uid);
+        } else {
+          div.classList.add('selected');
+          groupStagingUsers.push(user);
+        }
+        updateSelectedCount();
+      };
+
+      div.onclick = toggleSelection;
+
+      // If added manually via email, auto-select it!
+      if (autoSelect) {
+        // We prepend (add to top) if it's a manual add so the user sees it immediately
+        container.insertBefore(div, container.firstChild);
+        toggleSelection(); // Trigger the select logic
+      } else {
+        container.appendChild(div);
+      }
+    }
+
+    // 3. Handle Filter Search
+    function filterAddMemberList() {
+      const term = document.getElementById('addMemberFilter').value.toLowerCase();
+      const items = document.querySelectorAll('#addMemberListContainer .friend-item');
+      items.forEach(item => {
+        item.style.display = item.dataset.name.includes(term) ? 'flex' : 'none';
+      });
+    }
+
+    // 4. Update Button Text
+    function updateAddButtonLabel() {
+      const btn = document.getElementById('confirmAddMembersBtn');
+      btn.innerText = `Add Selected (${addMemberSelection.length})`;
+      btn.disabled = addMemberSelection.length === 0;
+    }
+
+    // 5. EXECUTE ADD (From List Selection)
+    async function executeAddSelectedMembers() {
+      if (addMemberSelection.length === 0) return;
+      const names = addMemberSelection.map(u => u.name || u.email).join(", ");
+      const uids = addMemberSelection.map(u => u.uid);
+
+      await performAddMember(uids, names);
+    }
+
+    // 6. EXECUTE ADD (From Manual Email Input)
+    // 6. EXECUTE ADD (From Manual Email Input) - UPDATED WITH CONFIRMATION
+    async function addMemberByEmailManual() {
+      const emailInput = document.getElementById('manualAddEmail');
+      const email = emailInput.value.trim().toLowerCase();
+
+      if (!email) return;
+
+      const btn = event.target; // Get the button that was clicked
+      const originalText = btn.innerText;
+
+      // UI Feedback
+      btn.innerText = "🔍";
+      btn.disabled = true;
+
+      try {
+        // 1. Search for the user
+        const snap = await db.collection('users').where('email', '==', email).get();
+
+        if (snap.empty) {
+          alert("User not found!");
+          btn.innerText = originalText;
+          btn.disabled = false;
+          return;
+        }
+
+        const newUser = snap.docs[0].data();
+        const newUid = snap.docs[0].id;
+
+        // 2. Check if already in group
+        const chatDoc = await db.collection('chats').doc(currentChatId).get();
+        if (chatDoc.data().members.includes(newUid)) {
+          alert(`${newUser.name} is already in this group!`);
+          btn.innerText = originalText;
+          btn.disabled = false;
+          return;
+        }
+
+        // 3. CONFIRMATION DIALOG
+        // We found them! Now ask the user to confirm.
+        const userConfirmed = confirm(
+          `User Found:\n\n👤 Name: ${newUser.name}\n📧 Email: ${newUser.email}\n\nDo you want to ADD this person to the group?`
+        );
+
+        if (userConfirmed) {
+          await performAddMember([newUid], newUser.name || newUser.email);
+          // performAddMember handles closing the modal
+        }
+
+      } catch (e) {
+        console.error(e);
+        alert("Error checking user.");
+      } finally {
+        // Reset button
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    // 7. SHARED: Database Update Logic
+    async function performAddMember(newUids, namesForMessage) {
+      const modal = document.getElementById('addMemberOverlay');
+
+      try {
+        // A. Add to Members Array (ArrayUnion handles uniqueness automatically)
+        await db.collection('chats').doc(currentChatId).update({
+          members: firebase.firestore.FieldValue.arrayUnion(...newUids)
+        });
+
+        // B. Send System Message
+        await db.collection('chats').doc(currentChatId).collection('messages').add({
+          sender: currentUser.uid,
+          senderName: currentUser.name,
+          text: `${currentUser.name} added ${namesForMessage}`,
+          type: "system",
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          status: 'sent'
+        });
+
+        // C. Close & Refresh
+        modal.style.display = 'none';
+        showChatDetails(); // Refresh the info screen
+        showAlert(`Successfully added: ${namesForMessage}`);
+
+      } catch (e) {
+        console.error(e);
+        alert("Failed to add members.");
+      }
+    }
+
+    function saveTokenToFirestore(token) {
+      if (!currentUser) return;
+      const userRef = db.collection('users').doc(currentUser.uid);
+      userRef.update({
+        fcmTokens: firebase.firestore.FieldValue.arrayUnion(token)
+      }).then(() => {
+        console.log("FCM Token saved to Firestore.");
+      }).catch((err) => {
+        console.error("Error saving token:", err);
+      });
+    }
+
+    // --- THE MAIN AUTHENTICATION LISTENER ---
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        // --- Presence Logic ---
+        const userStatusDatabaseRef = rtdb.ref('/status/' + user.uid);
+        const userStatusFirestoreRef = db.collection('users').doc(user.uid);
+
+        // --- PASTE THIS NEW BLOCK ---
+        rtdb.ref('.info/connected').on('value', (snapshot) => {
+          // If we lose internet locally, do nothing
+          if (snapshot.val() === false) {
+            return;
+          }
+
+          // Register the Disconnect Handler
+          userStatusDatabaseRef.onDisconnect().set({
+            online: false,
+            last_seen: firebase.database.ServerValue.TIMESTAMP
+          }).then(() => {
+            // THIS LOG CONFIRMS IT WORKED:
+            console.log("✅ Server has accepted the 'onDisconnect' instruction!");
+
+            // Now set us to Online
+            userStatusDatabaseRef.set({
+              online: true,
+              last_seen: firebase.database.ServerValue.TIMESTAMP
+            });
+
+            // Sync to Firestore
+            userStatusFirestoreRef.update({
+              online: true
+            });
+          }).catch(err => {
+            console.error("❌ Server REJECTED the 'onDisconnect' instruction:", err);
+          });
+        });
+        // --- End of Presence Logic ---
+
+        // Get user data
+        db.collection('users').doc(user.uid).get().then(async doc => {
+          if (doc.exists) {
+            currentUser = doc.data();
+            if (!currentUser.online) { // Correct the status if Firestore is stale
+              await userStatusFirestoreRef.update({ online: true });
+            }
+            initUIAfterLogin();
+          } else {
+            // Create new user
+            currentUser = {
+              uid: user.uid,
+              email: user.email,
+              name: user.displayName || user.email.split('@')[0],
+              photoURL: user.photoURL || '',
+              online: true
+            };
+            await db.collection("users").doc(user.uid).set(currentUser);
+            initUIAfterLogin();
+          }
+          setupFCM();
+        });
+
+      } else {
+        // User is signed out
+        loginArea.style.display = "flex";
+        inbox.style.display = "none";
+        chatBox.style.display = "none";
+        inputArea.style.display = "none";
+        searchArea.style.display = "none";
+        topIcons.style.display = "none";
+        document.getElementById('settingsOverlay').style.display = 'none';
+        document.getElementById('customAlert').style.display = 'none';
+        currentUser = null;
+        currentChatId = null;
+        if (unsubscribeInbox) unsubscribeInbox(); // Stop inbox listener
+        if (unsubscribeMsgs) unsubscribeMsgs(); // Stop chat listener
+
+        document.querySelector('.logo').innerHTML = `
+          <span class="logo-icon">💬</span>
+          <span>ConnectHub</span>
+        `;
+      }
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (document.getElementById('settingsOverlay').style.display === 'block') {
+          closeSettings();
+        } else if (document.getElementById('customAlert').style.display === 'block') {
+          closeAlert();
+        } else if (currentChatId) {
+          backToInbox();
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>
