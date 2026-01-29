@@ -1,5 +1,16 @@
 # Project Changelog
 
+## Version 2.12 - Personalization & Emojis
+**Date:** 29th January 2026
+
+**New Features:**
+- **Emoji Picker**: Dedicated button in chat input 😃.
+- **Custom Chat Wallpaper**:
+  - Set custom backgrounds (Color, Gradient, Image) per chat 🎨.
+  - Accessible via 3-dot menu > Wallpaper.
+
+---
+
 ## [2026-01-28] - Critical Bug Fixes & UX Improvements
 
 ### Added

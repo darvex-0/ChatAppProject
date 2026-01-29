@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, storage } from '../services/firebase';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, setDoc, deleteDoc, increment, limitToLast } from 'firebase/firestore';
@@ -6,9 +7,11 @@ import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import ChatInfoModal from './Modals/ChatInfoModal';
+import WallpaperModal from './Modals/WallpaperModal';
 import MessageItem from './MessageItem';
 import { Virtuoso } from 'react-virtuoso';
 import imageCompression from 'browser-image-compression';
+import EmojiPicker from 'emoji-picker-react';
 
 export default function ChatWindow() {
     const { chatId } = useParams();
@@ -38,8 +41,11 @@ export default function ChatWindow() {
 
     // Audio Recording State
     const [isRecording, setIsRecording] = useState(false);
+    const isRecordingRef = useRef(false); // Ref for cleanup access
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
+    const [recordingDuration, setRecordingDuration] = useState(0);
+    const recordingDurationRef = useRef(0); // Ref for cleanup access
 
     // Delete Confirmation State
     const [deleteMsgId, setDeleteMsgId] = useState(null);
@@ -47,6 +53,16 @@ export default function ChatWindow() {
     // Edit Message State
     const [editMsg, setEditMsg] = useState(null);
     const [editText, setEditText] = useState("");
+
+    // Wallpaper State
+    const [wallpaper, setWallpaper] = useState(null);
+    const [showWallpaperModal, setShowWallpaperModal] = useState(false);
+
+    // Emoji Picker State
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [emojiPickerPos, setEmojiPickerPos] = useState({ x: window.innerWidth / 2 - 150, y: window.innerHeight - 450 });
+    const [isDraggingEmoji, setIsDraggingEmoji] = useState(false);
+    const emojiDragOffset = useRef({ x: 0, y: 0 });
 
     // Network & Upload State
     const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -112,6 +128,43 @@ export default function ChatWindow() {
         resetUnread();
     }, [chatId, currentUser]);
 
+    // Load Wallpaper Preference
+    useEffect(() => {
+        if (!chatId || !currentUser) return;
+        const loadWallpaper = async () => {
+            try {
+                const docRef = doc(db, "users", currentUser.uid, "chatSettings", chatId);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists() && docSnap.data().wallpaper) {
+                    setWallpaper(docSnap.data().wallpaper);
+                } else {
+                    setWallpaper(null);
+                }
+            } catch (error) {
+                console.error("Error loading wallpaper:", error);
+            }
+        };
+        loadWallpaper();
+    }, [chatId, currentUser]);
+
+    const handleUpdateWallpaper = async (newWallpaper) => {
+        if (!chatId || !currentUser) return;
+        setWallpaper(newWallpaper);
+        try {
+            const docRef = doc(db, "users", currentUser.uid, "chatSettings", chatId);
+            await setDoc(docRef, { wallpaper: newWallpaper }, { merge: true });
+        } catch (error) {
+            console.error("Error saving wallpaper:", error);
+            showAlert("Failed to save wallpaper");
+        }
+    };
+
+    // Emoji Selection
+    const onEmojiClick = (emojiObject) => {
+        setInputText(prev => prev + emojiObject.emoji);
+        // Don't close picker to allow multiple emojis
+    };
+
     // Refs for Sound Logic
     const notificationSound = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'));
     const lastMessageIdRef = useRef(null);
@@ -120,32 +173,39 @@ export default function ChatWindow() {
 
     // Load voice draft for this chat from localStorage
     useEffect(() => {
-        const loadVoiceDraft = () => {
-            try {
-                const draftsJson = localStorage.getItem('voiceDrafts');
-                if (draftsJson) {
-                    const drafts = JSON.parse(draftsJson);
-                    const draft = drafts[chatId];
-                    if (draft) {
-                        // Reconstruct blob from base64
-                        fetch(draft.dataUrl)
-                            .then(res => res.blob())
-                            .then(blob => {
-                                setVoiceDraft({
-                                    audioBlob: blob,
-                                    previewUrl: draft.dataUrl,
-                                    duration: draft.duration
+        // Small delay to ensure chat reset is complete
+        const timer = setTimeout(() => {
+            const loadVoiceDraft = () => {
+                try {
+                    const draftsJson = localStorage.getItem('voiceDrafts');
+                    if (draftsJson) {
+                        const drafts = JSON.parse(draftsJson);
+                        const draft = drafts[chatId];
+                        if (draft) {
+                            // Reconstruct blob from base64
+                            fetch(draft.dataUrl)
+                                .then(res => res.blob())
+                                .then(blob => {
+                                    setVoiceDraft({
+                                        audioBlob: blob,
+                                        previewUrl: draft.dataUrl,
+                                        duration: draft.duration
+                                    });
                                 });
-                            });
+                        } else {
+                            setVoiceDraft(null);
+                        }
                     } else {
                         setVoiceDraft(null);
                     }
+                } catch (e) {
+                    console.error('Error loading voice draft:', e);
                 }
-            } catch (e) {
-                console.error('Error loading voice draft:', e);
-            }
-        };
-        loadVoiceDraft();
+            };
+            loadVoiceDraft();
+        }, 100);
+
+        return () => clearTimeout(timer);
     }, [chatId]);
 
     // Reset pagination and refs when chat changes
@@ -158,32 +218,50 @@ export default function ChatWindow() {
         hasScrolledToBottom.current = false; // Reset scroll flag
 
         // CRITICAL: Save recording as draft when switching chats
-        if (isRecording && mediaRecorderRef.current && audioChunksRef.current.length > 0) {
-            // Save current recording as draft
-            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                try {
-                    const draftsJson = localStorage.getItem('voiceDrafts') || '{}';
-                    const drafts = JSON.parse(draftsJson);
+        if (isRecordingRef.current && mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            // Capture values BEFORE any async operations
+            const saveToChatId = previousChatIdRef.current;
+            const duration = recordingDurationRef.current;
+            const recorder = mediaRecorderRef.current;
 
-                    drafts[previousChatIdRef.current] = {
-                        dataUrl: reader.result,
-                        duration: recordingDuration,
-                        timestamp: Date.now()
+            // Override onstop to save draft with final audio data
+            recorder.onstop = () => {
+                if (audioChunksRef.current.length > 0) {
+                    const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                    const reader = new FileReader();
+
+                    reader.onloadend = () => {
+                        try {
+                            const draftsJson = localStorage.getItem('voiceDrafts') || '{}';
+                            const drafts = JSON.parse(draftsJson);
+                            drafts[saveToChatId] = {
+                                dataUrl: reader.result,
+                                duration: duration,
+                                timestamp: Date.now()
+                            };
+                            localStorage.setItem('voiceDrafts', JSON.stringify(drafts));
+                        } catch (e) {
+                            console.error('Error saving voice draft:', e);
+                        }
                     };
-                    localStorage.setItem('voiceDrafts', JSON.stringify(drafts));
-                } catch (e) {
-                    console.error('Error saving voice draft:', e);
+                    reader.readAsDataURL(audioBlob);
                 }
+                // Stop all audio tracks
+                recorder.stream?.getTracks().forEach(track => track.stop());
             };
-            reader.readAsDataURL(audioBlob);
 
-            // Stop recording
-            mediaRecorderRef.current.stop();
-            mediaRecorderRef.current.stream?.getTracks().forEach(track => track.stop());
+            // Stop recording - this will trigger onstop after data is flushed
+            try {
+                recorder.stop();
+            } catch (e) {
+                console.error('Error stopping recorder:', e);
+            }
+
+            // Reset recording state immediately
             setIsRecording(false);
+            isRecordingRef.current = false;
             setRecordingDuration(0);
+            recordingDurationRef.current = 0;
             isCancelledRef.current = true;
         }
 
@@ -326,10 +404,9 @@ export default function ChatWindow() {
         markAsSeen();
     }, [chatId, messages, currentUser.uid]);
 
-    // Recording Timer State
-    const [recordingDuration, setRecordingDuration] = useState(0);
+    // Recording Timer State (recordingDuration already declared above with ref)
     const recordingIntervalRef = useRef(null);
-    const isCancelledRef = useRef(false);
+    const isCancelledRef = useRef(null);
 
     // Swipe to Cancel State
     const [dragOffset, setDragOffset] = useState(0);
@@ -433,6 +510,7 @@ export default function ChatWindow() {
 
             mediaRecorderRef.current.start();
             setIsRecording(true);
+            isRecordingRef.current = true; // Sync ref
         } catch (err) {
             console.error("Mic Error:", err);
             showAlert("Could not access microphone.");
@@ -444,6 +522,7 @@ export default function ChatWindow() {
             isCancelledRef.current = false; // Normal stop, not cancelled
             mediaRecorderRef.current.stop();
             setIsRecording(false);
+            isRecordingRef.current = false; // Sync ref
         }
     };
 
@@ -452,9 +531,12 @@ export default function ChatWindow() {
             isCancelledRef.current = true; // Mark as cancelled
             mediaRecorderRef.current.stop();
             setIsRecording(false);
+            isRecordingRef.current = false; // Sync ref
             setRecordingDuration(0);
+            recordingDurationRef.current = 0; // Sync ref
         }
         setIsRecording(false);
+        isRecordingRef.current = false;
     };
 
     const sendVoiceMessage = async (audioBlob) => {
@@ -885,6 +967,10 @@ export default function ChatWindow() {
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                                 Search
                             </div>
+                            <div className="dropdown-item" onClick={() => { setShowWallpaperModal(true); setIsMenuOpen(false); }}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                Wallpaper
+                            </div>
                             <div className="dropdown-item" onClick={() => { setShowInfoModal(true); setIsMenuOpen(false); }}>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                                 Chat Info
@@ -927,11 +1013,12 @@ export default function ChatWindow() {
             )}
 
             {/* Messages - Virtualized */}
-            <div id="chat-box" style={{ flexGrow: 1, padding: '0 1rem' }}>
+            <div id="chat-box" style={{ flexGrow: 1, padding: '0 1rem', background: wallpaper || 'transparent', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
+                {wallpaper && <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(15, 23, 42, 0.4)', pointerEvents: 'none', zIndex: 0 }} />}
                 <Virtuoso
                     key={chatId}
                     ref={virtuosoRef}
-                    style={{ height: '100%' }}
+                    style={{ height: '100%', zIndex: 1 }}
                     data={messages}
                     initialTopMostItemIndex={Math.max(0, messages.length - 1)}
                     startReached={loadMoreMessages}
@@ -1060,7 +1147,99 @@ export default function ChatWindow() {
                         </button>
                         <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} />
 
-                        <form onSubmit={sendMessage} style={{ flexGrow: 1, display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                        <form onSubmit={sendMessage} style={{ flexGrow: 1, display: 'flex', gap: '0.75rem', alignItems: 'center', position: 'relative' }}>
+                            {showEmojiPicker && ReactDOM.createPortal(
+                                <>
+                                    {/* Click outside overlay */}
+                                    <div
+                                        style={{
+                                            position: 'fixed',
+                                            top: 0,
+                                            left: 0,
+                                            width: '100vw',
+                                            height: '100vh',
+                                            zIndex: 999998
+                                        }}
+                                        onClick={() => setShowEmojiPicker(false)}
+                                    />
+                                    {/* Draggable Emoji Picker */}
+                                    <div
+                                        style={{
+                                            position: 'fixed',
+                                            top: emojiPickerPos.y,
+                                            left: emojiPickerPos.x,
+                                            zIndex: 999999,
+                                            boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
+                                            borderRadius: '12px',
+                                            overflow: 'hidden',
+                                            cursor: isDraggingEmoji ? 'grabbing' : 'default'
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        {/* Drag Handle */}
+                                        <div
+                                            style={{
+                                                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                                padding: '8px 12px',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                cursor: 'grab',
+                                                userSelect: 'none'
+                                            }}
+                                            onMouseDown={(e) => {
+                                                setIsDraggingEmoji(true);
+                                                emojiDragOffset.current = {
+                                                    x: e.clientX - emojiPickerPos.x,
+                                                    y: e.clientY - emojiPickerPos.y
+                                                };
+                                                const handleMouseMove = (ev) => {
+                                                    setEmojiPickerPos({
+                                                        x: Math.max(0, Math.min(window.innerWidth - 300, ev.clientX - emojiDragOffset.current.x)),
+                                                        y: Math.max(0, Math.min(window.innerHeight - 400, ev.clientY - emojiDragOffset.current.y))
+                                                    });
+                                                };
+                                                const handleMouseUp = () => {
+                                                    setIsDraggingEmoji(false);
+                                                    document.removeEventListener('mousemove', handleMouseMove);
+                                                    document.removeEventListener('mouseup', handleMouseUp);
+                                                };
+                                                document.addEventListener('mousemove', handleMouseMove);
+                                                document.addEventListener('mouseup', handleMouseUp);
+                                            }}
+                                        >
+                                            <span style={{ color: 'white', fontSize: '0.85rem', fontWeight: 500 }}>😃 Emojis</span>
+                                            <button
+                                                onClick={() => setShowEmojiPicker(false)}
+                                                style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1 }}
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                        <EmojiPicker
+                                            theme="dark"
+                                            onEmojiClick={onEmojiClick}
+                                            searchDisabled
+                                            skinTonesDisabled
+                                            height={350}
+                                            width={300}
+                                            previewConfig={{ showPreview: false }}
+                                        />
+                                    </div>
+                                </>,
+                                document.body
+                            )}
+
+                            <button
+                                type="button"
+                                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                className="icon-btn"
+                                title="Add Emoji"
+                                style={{ border: 'none', background: 'transparent', color: showEmojiPicker ? 'var(--primary)' : 'var(--gray)' }}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+                            </button>
+
                             <input
                                 id="messageInput"
                                 ref={inputRef}
@@ -1087,6 +1266,12 @@ export default function ChatWindow() {
             </div>
 
             {showInfoModal && <ChatInfoModal chatId={chatId} onClose={() => setShowInfoModal(false)} />}
+
+            <WallpaperModal
+                isOpen={showWallpaperModal}
+                onClose={() => setShowWallpaperModal(false)}
+                onUpdateWallpaper={handleUpdateWallpaper}
+            />
 
             {/* Delete Confirmation Overlay */}
             {deleteMsgId && (

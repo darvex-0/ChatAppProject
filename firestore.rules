@@ -7,6 +7,11 @@ service cloud.firestore {
       allow read: if request.auth != null;
       // Allow users to update their own profile (and create it on first login)
       allow write: if request.auth != null && request.auth.uid == userId;
+      
+      // Chat Settings (wallpapers, etc.) - users can only access their own
+      match /chatSettings/{chatId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
     
     // 2. CHATS COLLECTION (Direct & Groups)
