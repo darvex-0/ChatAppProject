@@ -312,6 +312,9 @@
     /* Alignment fix for Virtuoso container */
     align-self: flex-start;
     margin-right: auto;
+
+    /* Fix for truncated options menu */
+    overflow: visible !important;
   }
 
   @keyframes messageSlide {
@@ -446,16 +449,29 @@
   /* Message Options */
   .msg-options {
     position: absolute;
-    top: -10px;
-    right: 10px;
+    top: -25px;
+    /* Moved up slightly to avoid covering text */
+    /* Position will be handled by specific selectors below */
     background: var(--dark);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 20px;
     padding: 4px 8px;
     display: none;
     gap: 8px;
-    z-index: 10;
+    z-index: 100;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+    /* Prevent wrapping */
+  }
+
+  /* Outgoing: Align to right */
+  .message.self .msg-options {
+    right: 0;
+  }
+
+  /* Incoming: Align to left */
+  .message:not(.self) .msg-options {
+    left: 0;
   }
 
   .message:hover .msg-options {

@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import ChatInfoModal from './Modals/ChatInfoModal';
 import WallpaperModal from './Modals/WallpaperModal';
+import ForwardModal from './Modals/ForwardModal';
 import MessageItem from './MessageItem';
 import { Virtuoso } from 'react-virtuoso';
 import imageCompression from 'browser-image-compression';
@@ -54,6 +55,9 @@ export default function ChatWindow() {
     const [editMsg, setEditMsg] = useState(null);
     const [editText, setEditText] = useState("");
 
+    // Forward Message State
+    const [forwardMsg, setForwardMsg] = useState(null);
+
     // Wallpaper State
     const [wallpaper, setWallpaper] = useState(null);
     const [showWallpaperModal, setShowWallpaperModal] = useState(false);
@@ -87,6 +91,20 @@ export default function ChatWindow() {
             window.removeEventListener('offline', handleOffline);
         };
     }, []);
+
+    // Reset state when changing chats
+    useEffect(() => {
+        setReplyTo(null);
+        setEditMsg(null);
+        setEditText("");
+        setForwardMsg(null);
+        setShowEmojiPicker(false);
+        setInputText("");
+        setDeleteMsgId(null);
+        // We don't reset isRecording here because we might want to let it continue or handle it specifically
+        // But usually, you shouldn't carry a recording to another chat without intent.
+        // For now, let's leave recording as is, but reset UI specific to the previous chat context.
+    }, [chatId]);
 
     // Fetch chat info
     useEffect(() => {
@@ -171,7 +189,7 @@ export default function ChatWindow() {
     const isInitialLoad = useRef(true);
     const previousChatIdRef = useRef(chatId);
 
-    // Load voice draft for this chat from localStorage
+    // Load voice draft for this chat from localStorage (with 24-hour expiration)
     useEffect(() => {
         // Small delay to ensure chat reset is complete
         const timer = setTimeout(() => {
@@ -180,6 +198,23 @@ export default function ChatWindow() {
                     const draftsJson = localStorage.getItem('voiceDrafts');
                     if (draftsJson) {
                         const drafts = JSON.parse(draftsJson);
+                        let updated = false;
+                        const now = Date.now();
+                        const EXPIRATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+                        // Clean up expired drafts
+                        Object.keys(drafts).forEach(key => {
+                            if (drafts[key].timestamp && (now - drafts[key].timestamp) > EXPIRATION_MS) {
+                                delete drafts[key];
+                                updated = true;
+                            }
+                        });
+
+                        // Save cleaned drafts if any were removed
+                        if (updated) {
+                            localStorage.setItem('voiceDrafts', JSON.stringify(drafts));
+                        }
+
                         const draft = drafts[chatId];
                         if (draft) {
                             // Reconstruct blob from base64
@@ -269,22 +304,30 @@ export default function ChatWindow() {
         previousChatIdRef.current = chatId;
     }, [chatId]);
 
-    // Force scroll to bottom after initial messages load
+    // hasScrolledToBottom ref for future use
     const hasScrolledToBottom = useRef(false);
+
+    // Hide chat until positioned at bottom (prevents visible scroll)
+    const [isMessagesReady, setIsMessagesReady] = useState(false);
     useEffect(() => {
-        if (messages.length > 0 && !hasScrolledToBottom.current && virtuosoRef.current) {
-            // Small delay to ensure Virtuoso has rendered
-            const timer = setTimeout(() => {
-                virtuosoRef.current?.scrollToIndex({
-                    index: messages.length - 1,
-                    behavior: 'auto',
-                    align: 'end'
-                });
-                hasScrolledToBottom.current = true;
-            }, 100);
+        // Reset ready state when chat changes
+        setIsMessagesReady(false);
+        // Small delay to let Virtuoso position itself, then show
+        const timer = setTimeout(() => {
+            if (messages.length > 0) {
+                setIsMessagesReady(true);
+            }
+        }, 50);
+        return () => clearTimeout(timer);
+    }, [chatId]);
+
+    // Also show when messages first load
+    useEffect(() => {
+        if (messages.length > 0 && !isMessagesReady) {
+            const timer = setTimeout(() => setIsMessagesReady(true), 50);
             return () => clearTimeout(timer);
         }
-    }, [messages.length]);
+    }, [messages.length, isMessagesReady]);
 
     // Messages listener
     useEffect(() => {
@@ -576,20 +619,36 @@ export default function ChatWindow() {
     const handleInputChange = (e) => {
         setInputText(e.target.value);
         if (chatId) {
-            setDoc(doc(db, "chats", chatId, "typing", currentUser.uid), {
-                typing: e.target.value.length > 0,
-                name: currentUser.displayName || 'Someone',
-                timestamp: serverTimestamp()
-            }, { merge: true });
-
+            // Debounce typing indicator writes to reduce Firestore costs
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-            typingTimeoutRef.current = setTimeout(() => {
+
+            // Only write "typing: true" once, then wait before writing again
+            if (e.target.value.length > 0) {
+                // Set typing true (debounced - only writes after 300ms of typing)
+                typingTimeoutRef.current = setTimeout(() => {
+                    setDoc(doc(db, "chats", chatId, "typing", currentUser.uid), {
+                        typing: true,
+                        name: currentUser.displayName || 'Someone',
+                        timestamp: serverTimestamp()
+                    }, { merge: true });
+
+                    // Schedule stop-typing after 2 seconds of inactivity
+                    typingTimeoutRef.current = setTimeout(() => {
+                        setDoc(doc(db, "chats", chatId, "typing", currentUser.uid), {
+                            typing: false,
+                            name: currentUser.displayName || 'Someone',
+                            timestamp: serverTimestamp()
+                        }, { merge: true });
+                    }, 2000);
+                }, 300);
+            } else {
+                // Immediately mark as not typing when input is cleared
                 setDoc(doc(db, "chats", chatId, "typing", currentUser.uid), {
                     typing: false,
                     name: currentUser.displayName || 'Someone',
                     timestamp: serverTimestamp()
                 }, { merge: true });
-            }, 1000);
+            }
         }
     };
 
@@ -699,6 +758,85 @@ export default function ChatWindow() {
     const cancelEdit = () => {
         setEditMsg(null);
         setEditText("");
+    };
+
+
+    // Initiate Forward
+    const initiateForward = (msg) => {
+        setForwardMsg(msg);
+    };
+
+    // Track forward count for multi-forward
+    const forwardCountRef = useRef(0);
+
+    // Perform Forward to target chat
+    const performForward = async (targetChatId, targetChatName) => {
+        if (!forwardMsg || !targetChatId) return;
+
+        forwardCountRef.current += 1;
+        const currentForwardCount = forwardCountRef.current;
+
+        try {
+            // Prepare forwarded message data
+            const forwardedMsgData = {
+                sender: currentUser.uid,
+                senderName: currentUser.displayName || "User",
+                timestamp: serverTimestamp(),
+                type: forwardMsg.type,
+                isForwarded: true,
+                forwardCount: (forwardMsg.forwardCount || 0) + 1,
+                originalSender: forwardMsg.originalSender || forwardMsg.senderName,
+                originalSenderId: forwardMsg.originalSenderId || forwardMsg.sender,
+                status: 'sent'
+            };
+
+            // Copy content based on type
+            if (forwardMsg.type === 'text') {
+                forwardedMsgData.text = forwardMsg.text;
+            } else if (forwardMsg.type === 'image' || forwardMsg.type === 'audio' || forwardMsg.type === 'file') {
+                forwardedMsgData.fileURL = forwardMsg.fileURL;
+                forwardedMsgData.fileName = forwardMsg.fileName;
+            }
+
+            // Add message to target chat
+            await addDoc(collection(db, "chats", targetChatId, "messages"), forwardedMsgData);
+
+            // Update target chat metadata
+            const lastMsgPreview = forwardMsg.type === 'text'
+                ? forwardMsg.text?.slice(0, 30) + '...'
+                : forwardMsg.type === 'image' ? '🖼️ Image'
+                    : forwardMsg.type === 'audio' ? '🎤 Voice'
+                        : '📎 File';
+
+            const targetChatRef = doc(db, "chats", targetChatId);
+            const targetChatDoc = await getDoc(targetChatRef);
+            if (targetChatDoc.exists()) {
+                const updates = {
+                    lastMessage: `↪ ${lastMsgPreview}`,
+                    lastUpdate: serverTimestamp()
+                };
+                const targetMembers = targetChatDoc.data().members || [];
+                targetMembers.forEach(memberId => {
+                    if (memberId !== currentUser.uid) {
+                        updates[`unreadCounts.${memberId}`] = increment(1);
+                    }
+                });
+                await updateDoc(targetChatRef, updates);
+            }
+
+            // Show alert after small delay to allow multiple forwards to batch
+            setTimeout(() => {
+                if (forwardCountRef.current === currentForwardCount) {
+                    setForwardMsg(null);
+                    const count = forwardCountRef.current;
+                    forwardCountRef.current = 0;
+                    showAlert(count > 1 ? `Message forwarded to ${count} chats` : `Message forwarded to ${targetChatName}`);
+                }
+            }, 100);
+        } catch (e) {
+            console.error("Error forwarding message:", e);
+            showAlert("Failed to forward message");
+        }
     };
 
     const sendMessage = async (e) => {
@@ -1013,17 +1151,37 @@ export default function ChatWindow() {
             )}
 
             {/* Messages - Virtualized */}
-            <div id="chat-box" style={{ flexGrow: 1, padding: '0 1rem', background: wallpaper || 'transparent', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
+            <div
+                id="chat-box"
+                style={{
+                    flexGrow: 1,
+                    padding: '0 1rem',
+                    background: wallpaper || 'transparent',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundAttachment: 'local',
+                    position: 'relative',
+                    minHeight: 0,
+                    WebkitOverflowScrolling: 'touch'
+                }}
+            >
                 {wallpaper && <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(15, 23, 42, 0.4)', pointerEvents: 'none', zIndex: 0 }} />}
                 <Virtuoso
                     key={chatId}
                     ref={virtuosoRef}
-                    style={{ height: '100%', zIndex: 1 }}
+                    style={{
+                        height: '100%',
+                        zIndex: 1,
+                        opacity: isMessagesReady ? 1 : 0,
+                        transition: 'opacity 0.15s ease-in'
+                    }}
                     data={messages}
-                    initialTopMostItemIndex={Math.max(0, messages.length - 1)}
+                    initialTopMostItemIndex={messages.length - 1}
                     startReached={loadMoreMessages}
                     followOutput="auto"
                     alignToBottom
+                    overscan={200}
                     itemContent={(index, msg) => (
                         <MessageItem
                             key={msg.id}
@@ -1031,6 +1189,7 @@ export default function ChatWindow() {
                             currentUser={currentUser}
                             chatInfo={chatInfo}
                             initiateReply={initiateReply}
+                            initiateForward={initiateForward}
                             addReaction={addReaction}
                             confirmDelete={confirmDelete}
                             initiateEdit={initiateEdit}
@@ -1046,7 +1205,7 @@ export default function ChatWindow() {
             <div id="typingIndicator">{typingUser && <span>{typingUser}</span>}</div>
 
             {/* Input Area - With Voice Logic */}
-            <div id="input-area" style={{ position: 'relative' }}>
+            <div id="input-area" style={{ position: 'relative', zIndex: 60 }}>
                 {/* Voice Draft Preview (shown when returning to chat with saved recording) */}
                 {voiceDraft && !isRecording && (
                     <div style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '8px', padding: '12px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1077,10 +1236,28 @@ export default function ChatWindow() {
 
                 {replyTo && !isRecording && (
                     <div className="reply-preview-bar" style={{ display: 'flex' }}>
-                        <div className="reply-content"><strong>Replying to {replyTo.senderName}</strong><span>{replyTo.text}</span></div>
-                        <div className="icon-btn" style={{ width: '24px', height: '24px' }} onClick={cancelReply}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <div className="reply-content">
+                            <strong>Replying to {replyTo.senderName}</strong>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '300px', display: 'inline-block' }}>
+                                {replyTo.text?.length > 80 ? replyTo.text.slice(0, 80) + '...' : replyTo.text}
+                            </span>
                         </div>
+                        <button
+                            type="button"
+                            className="icon-btn"
+                            style={{
+                                width: '32px',
+                                height: '32px',
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: 'pointer',
+                                padding: 0
+                            }}
+                            onClick={cancelReply}
+                            title="Cancel Reply"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
                     </div>
                 )}
 
@@ -1206,6 +1383,28 @@ export default function ChatWindow() {
                                                 };
                                                 document.addEventListener('mousemove', handleMouseMove);
                                                 document.addEventListener('mouseup', handleMouseUp);
+                                            }}
+                                            onTouchStart={(e) => {
+                                                const touch = e.touches[0];
+                                                setIsDraggingEmoji(true);
+                                                emojiDragOffset.current = {
+                                                    x: touch.clientX - emojiPickerPos.x,
+                                                    y: touch.clientY - emojiPickerPos.y
+                                                };
+                                                const handleTouchMove = (ev) => {
+                                                    const t = ev.touches[0];
+                                                    setEmojiPickerPos({
+                                                        x: Math.max(0, Math.min(window.innerWidth - 300, t.clientX - emojiDragOffset.current.x)),
+                                                        y: Math.max(0, Math.min(window.innerHeight - 400, t.clientY - emojiDragOffset.current.y))
+                                                    });
+                                                };
+                                                const handleTouchEnd = () => {
+                                                    setIsDraggingEmoji(false);
+                                                    document.removeEventListener('touchmove', handleTouchMove);
+                                                    document.removeEventListener('touchend', handleTouchEnd);
+                                                };
+                                                document.addEventListener('touchmove', handleTouchMove, { passive: true });
+                                                document.addEventListener('touchend', handleTouchEnd);
                                             }}
                                         >
                                             <span style={{ color: 'white', fontSize: '0.85rem', fontWeight: 500 }}>😃 Emojis</span>
@@ -1366,6 +1565,16 @@ export default function ChatWindow() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Forward Modal */}
+            {forwardMsg && (
+                <ForwardModal
+                    message={forwardMsg}
+                    currentChatId={chatId}
+                    onClose={() => setForwardMsg(null)}
+                    onForward={performForward}
+                />
             )}
 
         </div>

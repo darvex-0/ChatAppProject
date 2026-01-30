@@ -81,8 +81,9 @@ function AudioPlayer({ src }) {
     );
 }
 
-export default function MessageItem({ msg, currentUser, chatInfo, initiateReply, addReaction, confirmDelete, initiateEdit, highlightText }) {
+export default function MessageItem({ msg, currentUser, chatInfo, initiateReply, initiateForward, addReaction, confirmDelete, initiateEdit, highlightText }) {
     const isMe = msg.sender === currentUser.uid;
+    const [showOriginalSender, setShowOriginalSender] = useState(false);
 
     if (msg.type === 'system') {
         return <div className="message system"><span>{msg.text.replace(currentUser.displayName, "You")}</span></div>;
@@ -108,6 +109,9 @@ export default function MessageItem({ msg, currentUser, chatInfo, initiateReply,
             <div className="msg-options" style={{ alignItems: 'center' }}>
                 <span className="option-btn reply-action" title="Reply" onClick={() => initiateReply(msg)}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 10 4 15 9 20"></polyline><path d="M20 4v7a4 4 0 0 1-4 4H4"></path></svg>
+                </span>
+                <span className="option-btn forward-action" title="Forward" onClick={() => initiateForward(msg)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 10 20 15 15 20"></polyline><path d="M4 4v7a4 4 0 0 0 4 4h12"></path></svg>
                 </span>
                 <div className="separator"></div>
                 <span className="option-btn emoji-action" onClick={() => addReaction(msg.id, '❤️')}>❤️</span>
@@ -137,8 +141,40 @@ export default function MessageItem({ msg, currentUser, chatInfo, initiateReply,
                 </div>
             )}
 
+            {/* Forwarded Label */}
+            {msg.isForwarded && (
+                <div
+                    onClick={() => setShowOriginalSender(!showOriginalSender)}
+                    style={{
+                        fontSize: '0.75rem',
+                        color: '#94a3b8',
+                        marginBottom: '4px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                    }}
+                >
+                    {msg.forwardCount >= 2 ? '↪↪' : '↪'}
+                    <span style={{ fontStyle: 'italic' }}>
+                        {msg.forwardCount >= 2 ? 'Forwarded many times' : 'Forwarded'}
+                    </span>
+                    {showOriginalSender && msg.originalSender && (
+                        <span style={{
+                            background: 'rgba(99, 102, 241, 0.2)',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            marginLeft: '4px',
+                            fontSize: '0.7rem'
+                        }}>
+                            Originally from: {msg.originalSender}
+                        </span>
+                    )}
+                </div>
+            )}
+
             {/* Content Types */}
-            {msg.type === 'image' && <img src={msg.fileURL} alt="attachment" onClick={() => window.open(msg.fileURL, '_blank')} />}
+            {msg.type === 'image' && <img src={msg.fileURL} alt="attachment" loading="lazy" onClick={() => window.open(msg.fileURL, '_blank')} />}
             {msg.type === 'audio' && <AudioPlayer src={msg.fileURL} />}
             {msg.type === 'text' && <div>{renderText(msg.text) || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>(No content)</span>}</div>}
             {msg.type === 'file' && (
@@ -172,6 +208,7 @@ export default function MessageItem({ msg, currentUser, chatInfo, initiateReply,
                         <img
                             src={msg.linkPreview.image}
                             alt=""
+                            loading="lazy"
                             style={{
                                 width: '100%',
                                 maxHeight: '150px',

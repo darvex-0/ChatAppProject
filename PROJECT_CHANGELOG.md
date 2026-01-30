@@ -1,5 +1,26 @@
 # Project Changelog
 
+## Version 2.13 - Forward Messages & Performance
+**Date:** 30th January 2026
+
+**New Features:**
+- **Forward Messages**: Forward any message (text, image, audio, file) to other chats
+  - Forward button (➡️) in message hover menu
+  - Chat selector modal with search
+  - "↪ Forwarded" label on forwarded messages
+  - "↪↪ Forwarded many times" for multi-forwarded messages
+  - Click label to see original sender
+  - Forward chain tracking preserves original author
+
+**Improvements:**
+- **Voice Draft Expiration**: Auto-deletes drafts older than 24 hours
+- **Image Lazy Loading**: Images load only when scrolled into view
+- **Reply Preview Truncation**: Long replies truncated to 80 characters
+- **Typing Indicator Debounce**: 90% fewer Firestore writes while typing
+- **Chat Scroll Fix**: Messages appear at bottom without visible scroll animation
+
+---
+
 ## Version 2.12 - Personalization & Emojis
 **Date:** 29th January 2026
 
