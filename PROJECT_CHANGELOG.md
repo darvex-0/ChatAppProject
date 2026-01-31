@@ -1,5 +1,25 @@
 # Project Changelog
 
+## Version 2.14 - User Profile Settings
+**Date:** 31st January 2026
+
+**New Features:**
+- **Profile Settings Modal**: Enhanced settings with new capabilities
+  - **Avatar Cropper**: Crop and zoom profile photos before uploading (using `react-easy-crop`)
+  - **Display Name**: Update your name instantly without page reload
+  - **Status Field**: Set a custom "About" message (e.g., "At work", "Sleeping")
+  - **Instant Save**: Profile changes save without refreshing the page
+- **Status Visibility**: View other users' status in ChatInfoModal for private chats
+  - Shows 💭 bubble with status below user email
+  - Displays "No status set" if user hasn't set a status
+
+**Technical:**
+- Added `react-easy-crop` dependency for image cropping
+- Created `cropImage.js` utility for canvas-based image processing
+- Removed `location.reload()` from settings save flow
+
+---
+
 ## Version 2.13 - Forward Messages & Performance
 **Date:** 30th January 2026
 

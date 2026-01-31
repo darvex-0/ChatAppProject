@@ -207,6 +207,26 @@ export default function ChatInfoModal({ chatId, onClose }) {
                         )}
                         <h2 style={{ color: 'white', fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.25rem' }}>{chatName}</h2>
                         <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>{subtitle}</p>
+
+                        {/* Status for Private Chats */}
+                        {!isGroup && (
+                            <div style={{
+                                marginTop: '0.75rem',
+                                padding: '0.5rem 1rem',
+                                background: 'rgba(99, 102, 241, 0.1)',
+                                border: '1px solid rgba(99, 102, 241, 0.2)',
+                                borderRadius: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                maxWidth: '250px'
+                            }}>
+                                <span style={{ fontSize: '1rem' }}>💭</span>
+                                <span style={{ color: '#e2e8f0', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                                    {members[0]?.status || "No status set"}
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Members List */}
