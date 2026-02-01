@@ -1,5 +1,5 @@
 {
-    "name": "ConnectHub - Chat App",
+    "name": "ConnectHub",
     "short_name": "ConnectHub",
     "description": "Real-time messaging app with voice messages, media sharing, and rich features",
     "start_url": "/",
@@ -12,13 +12,25 @@
             "src": "/icon-192.png",
             "sizes": "192x192",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
         },
         {
             "src": "/icon-512.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
         }
     ],
     "categories": [

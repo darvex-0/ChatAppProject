@@ -9,6 +9,7 @@ import { useUI } from '../context/UIContext';
 import ChatInfoModal from './Modals/ChatInfoModal';
 import WallpaperModal from './Modals/WallpaperModal';
 import ForwardModal from './Modals/ForwardModal';
+import MediaPreviewModal from './Modals/MediaPreviewModal';
 import MessageItem from './MessageItem';
 import { Virtuoso } from 'react-virtuoso';
 import imageCompression from 'browser-image-compression';
@@ -58,6 +59,12 @@ export default function ChatWindow() {
     // Forward Message State
     const [forwardMsg, setForwardMsg] = useState(null);
 
+    // Pinned Messages State
+    const [showPinnedBar, setShowPinnedBar] = useState(true);
+    const [currentPinIndex, setCurrentPinIndex] = useState(0);
+    const [pendingPinMsg, setPendingPinMsg] = useState(null); // Message awaiting duration selection
+    const MAX_PINS = 5;
+
     // Wallpaper State
     const [wallpaper, setWallpaper] = useState(null);
     const [showWallpaperModal, setShowWallpaperModal] = useState(false);
@@ -73,6 +80,9 @@ export default function ChatWindow() {
     const [uploadProgress, setUploadProgress] = useState(null); // {loaded: 5.5, total: 10}
     const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
     const uploadTaskRef = useRef(null); // Track active upload for cancellation
+
+    // Media Preview State
+    const [previewFile, setPreviewFile] = useState(null);
 
     const typingTimeoutRef = useRef(null);
     const inputRef = useRef(null);
@@ -760,6 +770,72 @@ export default function ChatWindow() {
         setEditText("");
     };
 
+    // Pin/Unpin Message
+    const pinMessage = async (msgId, shouldPin, durationMs = null) => {
+        // If pinning without duration, show the duration picker modal
+        if (shouldPin && durationMs === null) {
+            // Check pin limit first
+            const currentPins = messages.filter(m => m.isPinned && (!m.pinExpiresAt || (m.pinExpiresAt.toMillis ? m.pinExpiresAt.toMillis() : new Date(m.pinExpiresAt).getTime()) > Date.now()));
+            if (currentPins.length >= MAX_PINS) {
+                showAlert(`Maximum ${MAX_PINS} messages can be pinned`);
+                return;
+            }
+            setPendingPinMsg(msgId);
+            return;
+        }
+
+        // Calculate expiry time
+        let pinExpiresAt = null;
+        if (shouldPin && durationMs && durationMs !== 'forever') {
+            pinExpiresAt = new Date(Date.now() + durationMs);
+        }
+
+        // Optimistic update - update local state immediately
+        setMessages(prev => prev.map(m =>
+            m.id === msgId
+                ? { ...m, isPinned: shouldPin, pinnedBy: shouldPin ? currentUser.uid : null, pinExpiresAt: pinExpiresAt }
+                : m
+        ));
+
+        try {
+            const msgRef = doc(db, "chats", chatId, "messages", msgId);
+            if (shouldPin) {
+                await updateDoc(msgRef, {
+                    isPinned: true,
+                    pinnedAt: serverTimestamp(),
+                    pinnedBy: currentUser.uid,
+                    pinExpiresAt: pinExpiresAt
+                });
+            } else {
+                await updateDoc(msgRef, {
+                    isPinned: false,
+                    pinnedAt: null,
+                    pinnedBy: null,
+                    pinExpiresAt: null
+                });
+            }
+        } catch (e) {
+            console.error(e);
+            // Revert optimistic update on error
+            setMessages(prev => prev.map(m =>
+                m.id === msgId
+                    ? { ...m, isPinned: !shouldPin, pinnedBy: !shouldPin ? currentUser.uid : null }
+                    : m
+            ));
+            showAlert("Failed to pin message");
+        }
+    };
+
+    // Initiate pin with duration picker
+    const initiatePinWithDuration = (msgId) => {
+        const currentPins = messages.filter(m => m.isPinned && (!m.pinExpiresAt || (m.pinExpiresAt.toMillis ? m.pinExpiresAt.toMillis() : new Date(m.pinExpiresAt).getTime()) > Date.now()));
+        if (currentPins.length >= MAX_PINS) {
+            showAlert(`Maximum ${MAX_PINS} messages can be pinned`);
+            return;
+        }
+        setPendingPinMsg(msgId);
+    };
+
 
     // Initiate Forward
     const initiateForward = (msg) => {
@@ -894,6 +970,23 @@ export default function ChatWindow() {
             return;
         }
 
+        // 3. Show preview for images and videos
+        const isImage = file.type.startsWith('image/');
+        const isVideo = file.type.startsWith('video/');
+
+        if (isImage || isVideo) {
+            setPreviewFile(file);
+            e.target.value = '';
+            return;
+        }
+
+        // For other files, upload directly
+        await uploadFile(file);
+        e.target.value = '';
+    };
+
+    // Actual file upload logic (called after preview confirmation)
+    const uploadFile = async (file, caption = "") => {
         // Image Compression Logic (skip GIFs to preserve animation)
         const isGif = file.type === 'image/gif';
         if (file.type.startsWith('image/') && !isGif) {
@@ -918,66 +1011,80 @@ export default function ChatWindow() {
             const uploadTask = uploadBytesResumable(fileRef, file);
             uploadTaskRef.current = uploadTask; // Store for cancellation
 
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    const loaded = snapshot.bytesTransferred / 1024 / 1024;
-                    const total = snapshot.totalBytes / 1024 / 1024;
-                    setUploadProgress({ loaded, total });
-                },
-                (error) => {
-                    setUploadProgress(null);
-                    uploadTaskRef.current = null;
-                    if (error.code === 'storage/canceled') {
-                        showAlert("Upload cancelled");
-                    } else if (error.code === 'storage/network-request-failed') {
-                        showAlert("Network error. Please check your connection and try again.");
-                    } else {
-                        showAlert(`Upload failed: ${error.message}`);
-                    }
-                    e.target.value = '';
-                },
-                async () => {
-                    try {
-                        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                        const msgData = {
-                            sender: currentUser.uid,
-                            senderName: currentUser.displayName || "User",
-                            timestamp: serverTimestamp(),
-                            type: file.type.startsWith('image/') ? 'image' : 'file',
-                            fileURL: downloadURL,
-                            fileName: file.name,
-                            status: 'sent'
-                        };
-                        await addDoc(collection(db, "chats", chatId, "messages"), msgData);
-
-                        const updates = { lastMessage: file.type.startsWith('image/') ? '📷 Image' : '📄 File', lastUpdate: serverTimestamp() };
-                        if (chatInfo?.members) {
-                            chatInfo.members.forEach(memberId => {
-                                if (memberId !== currentUser.uid) {
-                                    updates[`unreadCounts.${memberId}`] = increment(1);
-                                }
-                            });
+            return new Promise((resolve, reject) => {
+                uploadTask.on('state_changed',
+                    (snapshot) => {
+                        const loaded = snapshot.bytesTransferred / 1024 / 1024;
+                        const total = snapshot.totalBytes / 1024 / 1024;
+                        setUploadProgress({ loaded, total });
+                    },
+                    (error) => {
+                        setUploadProgress(null);
+                        uploadTaskRef.current = null;
+                        if (error.code === 'storage/canceled') {
+                            showAlert("Upload cancelled");
+                        } else if (error.code === 'storage/network-request-failed') {
+                            showAlert("Network error. Please check your connection and try again.");
+                        } else {
+                            showAlert(`Upload failed: ${error.message}`);
                         }
-                        await updateDoc(doc(db, "chats", chatId), updates);
-                        setUploadProgress(null);
-                        uploadTaskRef.current = null;
-                        e.target.value = '';
-                    } catch (err) {
-                        console.error(err);
-                        showAlert("Failed to send file");
-                        setUploadProgress(null);
-                        uploadTaskRef.current = null;
-                        e.target.value = '';
+                        reject(error);
+                    },
+                    async () => {
+                        try {
+                            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                            const isImage = file.type.startsWith('image/');
+                            const isVideo = file.type.startsWith('video/');
+                            const msgData = {
+                                sender: currentUser.uid,
+                                senderName: currentUser.displayName || "User",
+                                timestamp: serverTimestamp(),
+                                type: isImage ? 'image' : isVideo ? 'video' : 'file',
+                                fileURL: downloadURL,
+                                fileName: file.name,
+                                status: 'sent'
+                            };
+                            // Add caption if provided
+                            if (caption && caption.trim()) {
+                                msgData.caption = caption.trim();
+                            }
+                            await addDoc(collection(db, "chats", chatId, "messages"), msgData);
+
+                            const lastMsgText = isImage ? '📷 Image' : isVideo ? '🎬 Video' : '📄 File';
+                            const updates = { lastMessage: lastMsgText, lastUpdate: serverTimestamp() };
+                            if (chatInfo?.members) {
+                                chatInfo.members.forEach(memberId => {
+                                    if (memberId !== currentUser.uid) {
+                                        updates[`unreadCounts.${memberId}`] = increment(1);
+                                    }
+                                });
+                            }
+                            await updateDoc(doc(db, "chats", chatId), updates);
+                            setUploadProgress(null);
+                            uploadTaskRef.current = null;
+                            resolve();
+                        } catch (err) {
+                            console.error(err);
+                            showAlert("Failed to send file");
+                            setUploadProgress(null);
+                            uploadTaskRef.current = null;
+                            reject(err);
+                        }
                     }
-                }
-            );
-        } catch (e) {
-            console.error(e);
+                );
+            });
+        } catch (err) {
+            console.error(err);
             showAlert("Error starting upload");
             setUploadProgress(null);
             uploadTaskRef.current = null;
-            e.target.value = '';
         }
+    };
+
+    // Handle media preview send
+    const handleMediaPreviewSend = async (file, caption) => {
+        setPreviewFile(null);
+        await uploadFile(file, caption);
     };
 
     // Cancel Upload Function
@@ -1150,6 +1257,111 @@ export default function ChatWindow() {
                 </div>
             )}
 
+            {/* Pinned Messages Banner - WhatsApp Style */}
+            {(() => {
+                const now = Date.now();
+                const pinnedMessages = messages.filter(m => m.isPinned && (!m.pinExpiresAt || (m.pinExpiresAt.toMillis ? m.pinExpiresAt.toMillis() : new Date(m.pinExpiresAt).getTime()) > now));
+                if (pinnedMessages.length === 0) return null;
+                if (!showPinnedBar) {
+                    // Collapsed state - just show a small indicator
+                    return (
+                        <div
+                            onClick={() => setShowPinnedBar(true)}
+                            style={{
+                                background: 'rgba(99, 102, 241, 0.2)',
+                                padding: '6px 12px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontSize: '0.8rem',
+                                color: 'var(--primary)'
+                            }}
+                        >
+                            📌 {pinnedMessages.length} pinned
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                    );
+                }
+                // Ensure currentPinIndex is valid
+                const safeIndex = currentPinIndex >= pinnedMessages.length ? 0 : currentPinIndex;
+                const currentPin = pinnedMessages[safeIndex];
+                return (
+                    <div style={{
+                        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%)',
+                        borderBottom: '1px solid rgba(99, 102, 241, 0.3)',
+                        padding: '10px 12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px'
+                    }}>
+                        {/* Navigation Arrows (if multiple pins) */}
+                        {pinnedMessages.length > 1 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <button
+                                    onClick={() => setCurrentPinIndex(prev => prev <= 0 ? pinnedMessages.length - 1 : prev - 1)}
+                                    style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: '2px' }}
+                                    title="Previous pin"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                                </button>
+                                <button
+                                    onClick={() => setCurrentPinIndex(prev => prev >= pinnedMessages.length - 1 ? 0 : prev + 1)}
+                                    style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: '2px' }}
+                                    title="Next pin"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                </button>
+                            </div>
+                        )}
+                        <span style={{ fontSize: '1rem' }}>📌</span>
+                        <div style={{ flex: 1, overflow: 'hidden' }}>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 600, marginBottom: '2px' }}>
+                                {pinnedMessages.length > 1 ? `${safeIndex + 1} of ${pinnedMessages.length} Pinned` : 'Pinned Message'}
+                            </div>
+                            <div
+                                style={{
+                                    fontSize: '0.85rem',
+                                    color: 'white',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    cursor: 'pointer'
+                                }}
+                                onClick={() => {
+                                    const idx = messages.findIndex(m => m.id === currentPin.id);
+                                    if (idx !== -1) virtuosoRef.current?.scrollToIndex({ index: idx, behavior: 'smooth', align: 'center' });
+                                }}
+                            >
+                                {currentPin.text || (currentPin.type === 'image' ? '🖼️ Image' : '🎤 Voice Message')}
+                            </div>
+                        </div>
+                        {/* Unpin this message */}
+                        <button
+                            onClick={() => {
+                                pinMessage(currentPin.id, false);
+                                if (safeIndex >= pinnedMessages.length - 1 && safeIndex > 0) {
+                                    setCurrentPinIndex(safeIndex - 1);
+                                }
+                            }}
+                            style={{ background: 'rgba(239, 68, 68, 0.2)', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem' }}
+                            title="Unpin this message"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            Unpin
+                        </button>
+                        {/* Collapse banner */}
+                        <button
+                            onClick={() => setShowPinnedBar(false)}
+                            style={{ background: 'transparent', border: 'none', color: 'var(--gray)', cursor: 'pointer', padding: '4px' }}
+                            title="Collapse"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                        </button>
+                    </div>
+                );
+            })()}
+
             {/* Messages - Virtualized */}
             <div
                 id="chat-box"
@@ -1193,6 +1405,7 @@ export default function ChatWindow() {
                             addReaction={addReaction}
                             confirmDelete={confirmDelete}
                             initiateEdit={initiateEdit}
+                            pinMessage={pinMessage}
                             highlightText={isSearchOpen ? searchQuery : null}
                         />
                     )}
@@ -1497,6 +1710,54 @@ export default function ChatWindow() {
                 </div>
             )}
 
+            {/* Pin Duration Picker Modal */}
+            {pendingPinMsg && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(5px)' }}>
+                    <div style={{ background: '#0f172a', padding: '1.5rem', borderRadius: '16px', border: '1px solid var(--primary)', maxWidth: '320px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+                        <div style={{ color: 'white', marginBottom: '1rem', fontSize: '1.1rem', fontWeight: 600, textAlign: 'center' }}>📌 Pin Duration</div>
+                        <div style={{ color: '#94a3b8', marginBottom: '1rem', fontSize: '0.85rem', textAlign: 'center' }}>How long should this message be pinned?</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {[
+                                { label: '1 Hour', ms: 60 * 60 * 1000 },
+                                { label: '12 Hours', ms: 12 * 60 * 60 * 1000 },
+                                { label: '1 Day', ms: 24 * 60 * 60 * 1000 },
+                                { label: '1 Week', ms: 7 * 24 * 60 * 60 * 1000 },
+                                { label: 'No Limit', ms: -1 } // Use -1 as marker for no expiry
+                            ].map(opt => (
+                                <button
+                                    key={opt.label}
+                                    onClick={() => {
+                                        // Pass null for no expiry, otherwise pass the duration
+                                        pinMessage(pendingPinMsg, true, opt.ms === -1 ? 'forever' : opt.ms);
+                                        setPendingPinMsg(null);
+                                    }}
+                                    style={{
+                                        background: opt.ms === -1 ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255,255,255,0.05)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        borderRadius: '8px',
+                                        padding: '12px',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        fontSize: '0.9rem',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={e => e.target.style.background = 'rgba(99, 102, 241, 0.3)'}
+                                    onMouseLeave={e => e.target.style.background = opt.ms === -1 ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255,255,255,0.05)'}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                        <button
+                            onClick={() => setPendingPinMsg(null)}
+                            style={{ marginTop: '1rem', width: '100%', background: 'transparent', border: '1px solid #64748b', borderRadius: '8px', padding: '10px', color: '#94a3b8', cursor: 'pointer', fontSize: '0.85rem' }}
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Voice Message Preview Modal */}
             {voicePreviewUrl && (
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(5px)' }}>
@@ -1574,6 +1835,15 @@ export default function ChatWindow() {
                     currentChatId={chatId}
                     onClose={() => setForwardMsg(null)}
                     onForward={performForward}
+                />
+            )}
+
+            {/* Media Preview Modal */}
+            {previewFile && (
+                <MediaPreviewModal
+                    file={previewFile}
+                    onSend={handleMediaPreviewSend}
+                    onCancel={() => setPreviewFile(null)}
                 />
             )}
 

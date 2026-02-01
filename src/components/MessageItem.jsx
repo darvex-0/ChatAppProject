@@ -81,7 +81,7 @@ function AudioPlayer({ src }) {
     );
 }
 
-export default function MessageItem({ msg, currentUser, chatInfo, initiateReply, initiateForward, addReaction, confirmDelete, initiateEdit, highlightText }) {
+export default function MessageItem({ msg, currentUser, chatInfo, initiateReply, initiateForward, addReaction, confirmDelete, initiateEdit, pinMessage, highlightText }) {
     const isMe = msg.sender === currentUser.uid;
     const [showOriginalSender, setShowOriginalSender] = useState(false);
 
@@ -117,6 +117,14 @@ export default function MessageItem({ msg, currentUser, chatInfo, initiateReply,
                 <span className="option-btn emoji-action" onClick={() => addReaction(msg.id, '❤️')}>❤️</span>
                 <span className="option-btn emoji-action" onClick={() => addReaction(msg.id, '😂')}>😂</span>
                 <span className="option-btn emoji-action" onClick={() => addReaction(msg.id, '👍')}>👍</span>
+                <div className="separator"></div>
+                <span
+                    className={`option-btn pin-action ${msg.isPinned ? 'pinned' : ''}`}
+                    title={msg.isPinned ? "Unpin" : "Pin"}
+                    onClick={() => msg.isPinned ? pinMessage(msg.id, false) : pinMessage(msg.id, true)}
+                >
+                    📌
+                </span>
                 {isMe && (
                     <>
                         <div className="separator"></div>

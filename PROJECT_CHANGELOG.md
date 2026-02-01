@@ -1,5 +1,46 @@
 # Project Changelog
 
+## Version 2.16 - Pin Messages 📌
+**Date:** 1st February 2026
+
+**New Features:**
+- **Pin Messages**: Pin important messages to the top of chat
+  - **Pin Limit**: Maximum 5 messages can be pinned per chat
+  - **Duration Picker**: Choose how long to pin (1 Hour, 12 Hours, 1 Day, 1 Week, No Limit)
+  - **Auto-Expire**: Pins automatically disappear when duration expires
+  - **WhatsApp-Style Banner**: Navigate between pinned messages with ⬆️⬇️ arrows
+  - **Individual Unpin**: Unpin specific messages without affecting others
+  - **Collapsible Banner**: Minimize the banner without unpinning (click to expand)
+
+**Bug Fixes:**
+- Fixed infinite modal loop when selecting "No Limit" option (falsy `0` value issue)
+
+---
+
+## Version 2.15 - Media Preview & Editing
+**Date:** 31st January 2026
+
+**New Features:**
+- **Media Preview Modal**: Full-screen preview before sending images/videos
+  - Preview images and videos before sending
+  - Add captions to media
+  - File size display
+- **Image Cropping**: Crop and zoom images using `react-easy-crop`
+- **Image Filters**: 10 preset filters (Bright, Contrast, Warm, Cool, Vivid, B&W, Sepia, Vintage, Fade)
+  - Mobile-friendly 5-column grid with emoji icons
+  - Real-time preview with CSS filters
+  - Applied via canvas before upload
+- **Video Trimmer**: Instagram/TikTok-style trim interface
+  - Draggable start/end handles
+  - Visual timeline with playhead
+  - Time display (start, duration, end)
+  - Touch-friendly for mobile
+
+**Bug Fixes:**
+- Fixed video trimmer end-handle drag issue (stale closure bug)
+
+---
+
 ## Version 2.14 - User Profile Settings
 **Date:** 31st January 2026
 
