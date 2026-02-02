@@ -1,5 +1,28 @@
 # Project Changelog
 
+## Version 2.17 - Full Emoji Reactions 😊
+**Date:** 2nd February 2026
+
+**New Features:**
+- **Full Emoji Reactions**: Upgraded from 3 hardcoded emojis to full emoji picker
+  - **Emoji Picker Button**: Click 😊+ in message hover menu to open picker
+  - **300+ Emojis**: Access to all emoji categories
+  - **Toggle Reactions**: Click same emoji again to remove reaction (WhatsApp-style)
+  - **Clickable Reaction Bubbles**: Click reaction bubbles below messages to toggle
+  - **Visual Feedback**: Your reactions highlighted in indigo with blue glow
+  - **Hover Effects**: Bubbles scale on hover for better UX
+  - **Smart Positioning**: Picker positioned to avoid overflow
+  - **Click-Outside to Close**: Picker auto-closes when clicking elsewhere
+
+**Technical Details:**
+- Reused existing `emoji-picker-react` library
+- Added `deleteField()` for reaction removal
+- Implemented `my-reaction` CSS class for visual distinction
+- Added toggle logic in `addReaction` function
+
+---
+
+
 ## Version 2.16 - Pin Messages 📌
 **Date:** 1st February 2026
 

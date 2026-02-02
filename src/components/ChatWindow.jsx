@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, storage } from '../services/firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, setDoc, deleteDoc, increment, limitToLast } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, setDoc, deleteDoc, deleteField, increment, limitToLast } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
@@ -715,7 +715,17 @@ export default function ChatWindow() {
     const addReaction = async (msgId, emoji) => {
         try {
             const msgRef = doc(db, "chats", chatId, "messages", msgId);
-            await updateDoc(msgRef, { [`reactions.${currentUser.uid}`]: emoji });
+
+            // Find the message to check existing reaction
+            const msg = messages.find(m => m.id === msgId);
+            const currentReaction = msg?.reactions?.[currentUser.uid];
+
+            // Toggle: if same emoji clicked again, remove reaction; otherwise set new reaction
+            if (currentReaction === emoji) {
+                await updateDoc(msgRef, { [`reactions.${currentUser.uid}`]: deleteField() });
+            } else {
+                await updateDoc(msgRef, { [`reactions.${currentUser.uid}`]: emoji });
+            }
         } catch (e) {
             console.error(e);
         }

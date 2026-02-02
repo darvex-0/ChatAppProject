@@ -1,4 +1,6 @@
 import { useState, useRef } from 'react';
+import ReactDOM from 'react-dom';
+import EmojiPicker from 'emoji-picker-react';
 
 // Helper component for audio messages with duration display
 function AudioPlayer({ src }) {
@@ -84,6 +86,10 @@ function AudioPlayer({ src }) {
 export default function MessageItem({ msg, currentUser, chatInfo, initiateReply, initiateForward, addReaction, confirmDelete, initiateEdit, pinMessage, highlightText }) {
     const isMe = msg.sender === currentUser.uid;
     const [showOriginalSender, setShowOriginalSender] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [emojiPickerPos, setEmojiPickerPos] = useState({ x: 100, y: 100 });
+    const [isDraggingEmoji, setIsDraggingEmoji] = useState(false);
+    const emojiDragOffset = useRef({ x: 0, y: 0 });
 
     if (msg.type === 'system') {
         return <div className="message system"><span>{msg.text.replace(currentUser.displayName, "You")}</span></div>;
@@ -114,9 +120,111 @@ export default function MessageItem({ msg, currentUser, chatInfo, initiateReply,
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 10 20 15 15 20"></polyline><path d="M4 4v7a4 4 0 0 0 4 4h12"></path></svg>
                 </span>
                 <div className="separator"></div>
-                <span className="option-btn emoji-action" onClick={() => addReaction(msg.id, '❤️')}>❤️</span>
-                <span className="option-btn emoji-action" onClick={() => addReaction(msg.id, '😂')}>😂</span>
-                <span className="option-btn emoji-action" onClick={() => addReaction(msg.id, '👍')}>👍</span>
+                <span
+                    className="option-btn emoji-action"
+                    title="Add Reaction"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setEmojiPickerPos({ x: Math.min(window.innerWidth - 320, e.clientX), y: Math.min(window.innerHeight - 420, e.clientY) });
+                        setShowEmojiPicker(!showEmojiPicker);
+                    }}
+                >
+                    😊+
+                </span>
+                {showEmojiPicker && ReactDOM.createPortal(
+                    <>
+                        {/* Draggable Emoji Picker */}
+                        <div
+                            style={{
+                                position: 'fixed',
+                                top: emojiPickerPos.y,
+                                left: emojiPickerPos.x,
+                                zIndex: 999999,
+                                boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
+                                borderRadius: '12px',
+                                overflow: 'hidden',
+                                cursor: isDraggingEmoji ? 'grabbing' : 'default'
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Drag Handle */}
+                            <div
+                                style={{
+                                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                    padding: '8px 12px',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    cursor: 'grab',
+                                    userSelect: 'none'
+                                }}
+                                onMouseDown={(e) => {
+                                    setIsDraggingEmoji(true);
+                                    emojiDragOffset.current = {
+                                        x: e.clientX - emojiPickerPos.x,
+                                        y: e.clientY - emojiPickerPos.y
+                                    };
+                                    const handleMouseMove = (ev) => {
+                                        setEmojiPickerPos({
+                                            x: Math.max(0, Math.min(window.innerWidth - 300, ev.clientX - emojiDragOffset.current.x)),
+                                            y: Math.max(0, Math.min(window.innerHeight - 400, ev.clientY - emojiDragOffset.current.y))
+                                        });
+                                    };
+                                    const handleMouseUp = () => {
+                                        setIsDraggingEmoji(false);
+                                        document.removeEventListener('mousemove', handleMouseMove);
+                                        document.removeEventListener('mouseup', handleMouseUp);
+                                    };
+                                    document.addEventListener('mousemove', handleMouseMove);
+                                    document.addEventListener('mouseup', handleMouseUp);
+                                }}
+                                onTouchStart={(e) => {
+                                    const touch = e.touches[0];
+                                    setIsDraggingEmoji(true);
+                                    emojiDragOffset.current = {
+                                        x: touch.clientX - emojiPickerPos.x,
+                                        y: touch.clientY - emojiPickerPos.y
+                                    };
+                                    const handleTouchMove = (ev) => {
+                                        const t = ev.touches[0];
+                                        setEmojiPickerPos({
+                                            x: Math.max(0, Math.min(window.innerWidth - 300, t.clientX - emojiDragOffset.current.x)),
+                                            y: Math.max(0, Math.min(window.innerHeight - 400, t.clientY - emojiDragOffset.current.y))
+                                        });
+                                    };
+                                    const handleTouchEnd = () => {
+                                        setIsDraggingEmoji(false);
+                                        document.removeEventListener('touchmove', handleTouchMove);
+                                        document.removeEventListener('touchend', handleTouchEnd);
+                                    };
+                                    document.addEventListener('touchmove', handleTouchMove, { passive: true });
+                                    document.addEventListener('touchend', handleTouchEnd);
+                                }}
+                            >
+                                <span style={{ color: 'white', fontSize: '0.85rem', fontWeight: 500 }}>😃 React</span>
+                                <button
+                                    onClick={() => setShowEmojiPicker(false)}
+                                    style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1 }}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                            <EmojiPicker
+                                theme="dark"
+                                onEmojiClick={(emojiObject) => {
+                                    addReaction(msg.id, emojiObject.emoji);
+                                    setShowEmojiPicker(false);
+                                }}
+                                searchDisabled
+                                skinTonesDisabled
+                                height={350}
+                                width={300}
+                                previewConfig={{ showPreview: false }}
+                            />
+                        </div>
+                    </>,
+                    document.body
+                )}
                 <div className="separator"></div>
                 <span
                     className={`option-btn pin-action ${msg.isPinned ? 'pinned' : ''}`}
@@ -244,7 +352,24 @@ export default function MessageItem({ msg, currentUser, chatInfo, initiateReply,
             )}
 
             {/* Reactions */}
-            {Object.keys(reactionCounts).length > 0 && <div className="reaction-container">{Object.entries(reactionCounts).map(([e, c]) => <span key={e} className="reaction-bubble">{e} {c > 1 ? c : ''}</span>)}</div>}
+            {Object.keys(reactionCounts).length > 0 && (
+                <div className="reaction-container">
+                    {Object.entries(reactionCounts).map(([emoji, count]) => {
+                        const hasReacted = msg.reactions?.[currentUser.uid] === emoji;
+                        return (
+                            <span
+                                key={emoji}
+                                className={`reaction-bubble ${hasReacted ? 'my-reaction' : ''}`}
+                                onClick={() => addReaction(msg.id, emoji)}
+                                style={{ cursor: 'pointer' }}
+                                title={hasReacted ? 'Click to remove your reaction' : 'Click to react'}
+                            >
+                                {emoji} {count > 1 ? count : ''}
+                            </span>
+                        );
+                    })}
+                </div>
+            )}
 
             {/* Receipts */}
             <div className="receipt-area">
