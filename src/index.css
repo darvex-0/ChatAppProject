@@ -312,6 +312,8 @@
     /* Alignment fix for Virtuoso container */
     align-self: flex-start;
     margin-right: auto;
+    margin-left: 16px;
+    /* Space for star icon */
 
     /* Fix for truncated options menu */
     overflow: visible !important;

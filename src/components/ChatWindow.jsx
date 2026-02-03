@@ -59,6 +59,9 @@ export default function ChatWindow() {
     // Forward Message State
     const [forwardMsg, setForwardMsg] = useState(null);
 
+    // Starred Messages State
+    const [starredIds, setStarredIds] = useState(new Set());
+
     // Pinned Messages State
     const [showPinnedBar, setShowPinnedBar] = useState(true);
     const [currentPinIndex, setCurrentPinIndex] = useState(0);
@@ -846,6 +849,45 @@ export default function ChatWindow() {
         setPendingPinMsg(msgId);
     };
 
+    // Star/Unstar Message
+    const starMessage = async (msgId, shouldStar) => {
+        try {
+            const userStarRef = doc(db, "users", currentUser.uid, "starredMessages", msgId);
+            if (shouldStar) {
+                // Get message data to store in user's subcollection
+                const msg = messages.find(m => m.id === msgId);
+                if (!msg) return;
+
+                const starData = {
+                    messageId: msg.id,
+                    chatId: chatId,
+                    chatName: chatInfo?.name || "Chat",
+                    text: msg.text || (msg.type === 'image' ? 'Image' : 'File'),
+                    senderName: msg.senderName,
+                    starredAt: serverTimestamp(),
+                    timestamp: msg.timestamp // Original timestamp
+                };
+                await setDoc(userStarRef, starData);
+            } else {
+                await deleteDoc(userStarRef);
+            }
+        } catch (e) {
+            console.error("Error starring message:", e);
+            showAlert("Failed to update star status");
+        }
+    };
+
+    // Listen to User's Starred Messages
+    useEffect(() => {
+        if (!currentUser) return;
+        const q = query(collection(db, "users", currentUser.uid, "starredMessages"));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const ids = new Set(snapshot.docs.map(doc => doc.id));
+            setStarredIds(ids);
+        });
+        return () => unsubscribe();
+    }, [currentUser]);
+
 
     // Initiate Forward
     const initiateForward = (msg) => {
@@ -1407,7 +1449,7 @@ export default function ChatWindow() {
                     itemContent={(index, msg) => (
                         <MessageItem
                             key={msg.id}
-                            msg={msg}
+                            msg={{ ...msg, isStarred: starredIds.has(msg.id) }}
                             currentUser={currentUser}
                             chatInfo={chatInfo}
                             initiateReply={initiateReply}
@@ -1416,6 +1458,7 @@ export default function ChatWindow() {
                             confirmDelete={confirmDelete}
                             initiateEdit={initiateEdit}
                             pinMessage={pinMessage}
+                            starMessage={starMessage}
                             highlightText={isSearchOpen ? searchQuery : null}
                         />
                     )}

@@ -83,7 +83,7 @@ function AudioPlayer({ src }) {
     );
 }
 
-export default function MessageItem({ msg, currentUser, chatInfo, initiateReply, initiateForward, addReaction, confirmDelete, initiateEdit, pinMessage, highlightText }) {
+export default function MessageItem({ msg, currentUser, chatInfo, initiateReply, initiateForward, addReaction, confirmDelete, initiateEdit, pinMessage, starMessage, highlightText }) {
     const isMe = msg.sender === currentUser.uid;
     const [showOriginalSender, setShowOriginalSender] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -233,6 +233,14 @@ export default function MessageItem({ msg, currentUser, chatInfo, initiateReply,
                 >
                     📌
                 </span>
+                <span
+                    className={`option-btn star-action ${msg.isStarred ? 'starred' : ''}`}
+                    title={msg.isStarred ? "Unstar" : "Star"}
+                    onClick={() => starMessage(msg.id, !msg.isStarred)}
+                    style={{ color: msg.isStarred ? '#fbbf24' : 'inherit' }}
+                >
+                    ⭐
+                </span>
                 {isMe && (
                     <>
                         <div className="separator"></div>
@@ -286,6 +294,37 @@ export default function MessageItem({ msg, currentUser, chatInfo, initiateReply,
                             Originally from: {msg.originalSender}
                         </span>
                     )}
+                </div>
+            )}
+
+            {/* Starred Indicator */}
+            {msg.isStarred && (
+                <div
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        starMessage(msg.id, false);
+                    }}
+                    title="Click to Unstar"
+                    style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '-12px',
+                        transform: 'translateY(-50%)',
+                        background: '#fbbf24',
+                        borderRadius: '50%',
+                        width: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.85rem',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                        zIndex: 10,
+                        border: '2px solid rgba(30, 41, 59, 1)',
+                        cursor: 'pointer'
+                    }}
+                >
+                    ⭐
                 </div>
             )}
 

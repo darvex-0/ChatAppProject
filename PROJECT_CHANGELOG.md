@@ -1,5 +1,24 @@
 # Project Changelog
 
+## Version 2.18 - Starred Messages & UI Polish ⭐
+**Date:** 3rd February 2026
+
+**New Features:**
+- **Starred Messages**: Save important messages for later reference
+  - **Star/Unstar**: Star messages via hover menu or by long-pressing
+  - **Visual Indicator**: Gold star badge on starred messages (left-middle position)
+  - **Interactive Badge**: Click the star badge directly to unstar
+  - **Starred Modal**: View all starred messages centrally (Header > ⭐ button)
+  - **Jump to Message**: Click a starred message in the modal to navigate to it in chat
+  - **Real-time Sync**: Star status syncs instantly across devices via Firestore
+
+**Improvements:**
+- **UI Polish**:
+  - **Message Margins**: Added margins to message bubbles to prevent icon clipping
+  - **Star Positioning**: Optimized star badge placement for better visibility
+  - **Hover Effects**: Enhanced interactive states for star controls
+
+
 ## Version 2.17 - Full Emoji Reactions 😊
 **Date:** 2nd February 2026
 
