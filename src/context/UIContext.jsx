@@ -10,6 +10,25 @@ export function UIProvider({ children }) {
     // Notification State
     const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
 
+    // Notification Settings (Persisted)
+    const [notificationSettings, setNotificationSettings] = useState(() => {
+        const saved = localStorage.getItem('notificationSettings');
+        return saved ? JSON.parse(saved) : {
+            sound: true,
+            desktop: true,
+            preview: true
+        };
+    });
+
+    // Update settings and persist
+    const updateNotificationSettings = (key, value) => {
+        setNotificationSettings(prev => {
+            const newSettings = { ...prev, [key]: value };
+            localStorage.setItem('notificationSettings', JSON.stringify(newSettings));
+            return newSettings;
+        });
+    };
+
     useEffect(() => {
         // Sync permission changes if possible (browsers don't always fire event for this)
         const checkPerm = () => setNotificationPermission(Notification.permission);
@@ -63,6 +82,7 @@ export function UIProvider({ children }) {
             isSearchOpen, toggleSearch,
             alert, showAlert, closeAlert,
             notificationPermission, requestNotificationPermission,
+            notificationSettings, updateNotificationSettings,
             toast, showToast, closeToast
         }}>
             {children}

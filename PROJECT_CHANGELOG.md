@@ -1,5 +1,21 @@
 # Project Changelog
 
+## Version 2.19 - Notification Settings & Status Polish 🔔
+**Date:** 3rd February 2026
+
+**New Features:**
+- **Notification Settings**: Control how you receive alerts
+  - **Sound Effects**: Toggle "Ding" sound for new messages on/off
+  - **Desktop Notifications**: Enable/Disable system-level notifications
+  - **Message Preview**: Choose whether to show message content in notifications
+  - **Persistence**: Settings saved to your device automatically
+
+**Improvements:**
+- **Profile Settings UI**:
+  - **Restored Status Field**: Fixed missing "About / Status" input in Settings Modal
+  - **UI/UX**: Added glassmorphism toggles for settings with smooth animations
+
+
 ## Version 2.18 - Starred Messages & UI Polish ⭐
 **Date:** 3rd February 2026
 

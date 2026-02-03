@@ -34,7 +34,7 @@ function OnlineIndicator({ userId, onProfileUpdate }) {
 
 export default function Sidebar() {
     const { currentUser } = useAuth();
-    const { searchQuery, setSearchQuery, notificationPermission, requestNotificationPermission } = useUI();
+    const { searchQuery, setSearchQuery, notificationPermission, requestNotificationPermission, notificationSettings } = useUI();
     const [chats, setChats] = useState([]);
     const navigate = useNavigate();
     const userCache = useRef({});
@@ -56,6 +56,62 @@ export default function Sidebar() {
             return chat;
         }));
     }, []);
+
+    // Notification Logic (Sound & Desktop)
+    const prevUnreadCountsRef = useRef({});
+    const isFirstLoadRef = useRef(true);
+    const audioRef = useRef(new Audio("https://cdn.pixabay.com/download/audio/2022/03/15/audio_2756ae75e3.mp3?filename=notification-sound-7062.mp3")); // Clean "Ding" sound
+
+    useEffect(() => {
+        if (!chats.length) return;
+
+        const currentUnreadCounts = {};
+        let hasNewUnread = false;
+        let lastNewMessage = null;
+
+        chats.forEach(chat => {
+            const count = chat.unreadCounts?.[currentUser.uid] || 0;
+            currentUnreadCounts[chat.id] = count;
+
+            // Check if unread count increased
+            const prevCount = prevUnreadCountsRef.current[chat.id] || 0;
+            if (count > prevCount) {
+                hasNewUnread = true;
+                lastNewMessage = chat;
+            }
+        });
+
+        // Skip notification on first load
+        if (isFirstLoadRef.current) {
+            prevUnreadCountsRef.current = currentUnreadCounts;
+            isFirstLoadRef.current = false;
+            return;
+        }
+
+        // Trigger Notification if new unread
+        if (hasNewUnread) {
+            // 1. Play Sound
+            if (notificationSettings?.sound) {
+                audioRef.current.currentTime = 0;
+                audioRef.current.play().catch(e => console.error("Error playing sound:", e));
+            }
+
+            // 2. Desktop Notification
+            if (notificationSettings?.desktop && notificationPermission === 'granted') {
+                const title = `New message from ${lastNewMessage.displayName}`;
+                const options = {
+                    body: notificationSettings?.preview ? (lastNewMessage.lastMessage || "Sent a photo") : "New message received",
+                    icon: '/icon-192.png', // Ensure this exists public folder
+                    badge: '/icon-192.png'
+                };
+                new Notification(title, options);
+            }
+        }
+
+        // Update ref
+        prevUnreadCountsRef.current = currentUnreadCounts;
+
+    }, [chats, currentUser.uid, notificationPermission, notificationSettings]);
 
     // PWA Install Prompt Listener
     useEffect(() => {

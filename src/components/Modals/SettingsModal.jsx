@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useUI } from '../../context/UIContext';
 import { db, storage } from '../../services/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -9,6 +10,7 @@ import getCroppedImg from '../../utils/cropImage';
 
 export default function SettingsModal({ onClose }) {
     const { currentUser, logout } = useAuth();
+    const { notificationSettings, updateNotificationSettings } = useUI();
     const [username, setUsername] = useState(currentUser?.displayName || "");
     const [status, setStatus] = useState("");
     const [saving, setSaving] = useState(false);
@@ -184,6 +186,91 @@ export default function SettingsModal({ onClose }) {
                         className="modal-input"
                         style={{ width: '100%', padding: '0.75rem 1rem', background: 'rgba(30, 41, 59, 0.7)', color: 'white', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem' }}
                     />
+
+                    {/* Notification Settings Section */}
+                    <div style={{ marginBottom: '1.5rem', marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
+                        <h4 style={{ color: '#cbd5e1', fontSize: '0.9rem', marginBottom: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '1.1rem' }}>🔔</span> Notification Settings
+                        </h4>
+
+                        {/* Toggle Option: Sound */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                            <span style={{ color: 'white', fontSize: '0.9rem' }}>Sound Effects</span>
+                            <div
+                                onClick={() => updateNotificationSettings('sound', !notificationSettings.sound)}
+                                style={{
+                                    width: '44px', height: '24px',
+                                    background: notificationSettings.sound ? '#10b981' : 'rgba(255,255,255,0.2)',
+                                    borderRadius: '99px',
+                                    position: 'relative',
+                                    cursor: 'pointer',
+                                    transition: 'background 0.3s ease'
+                                }}
+                            >
+                                <div style={{
+                                    width: '18px', height: '18px',
+                                    background: 'white',
+                                    borderRadius: '50%',
+                                    position: 'absolute',
+                                    top: '3px',
+                                    left: notificationSettings.sound ? '23px' : '3px',
+                                    transition: 'left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                                }} />
+                            </div>
+                        </div>
+
+                        {/* Toggle Option: Desktop Notifications */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                            <span style={{ color: 'white', fontSize: '0.9rem' }}>Desktop Notifications</span>
+                            <div
+                                onClick={() => updateNotificationSettings('desktop', !notificationSettings.desktop)}
+                                style={{
+                                    width: '44px', height: '24px',
+                                    background: notificationSettings.desktop ? '#10b981' : 'rgba(255,255,255,0.2)',
+                                    borderRadius: '99px',
+                                    position: 'relative',
+                                    cursor: 'pointer',
+                                    transition: 'background 0.3s ease'
+                                }}
+                            >
+                                <div style={{
+                                    width: '18px', height: '18px',
+                                    background: 'white',
+                                    borderRadius: '50%',
+                                    position: 'absolute',
+                                    top: '3px',
+                                    left: notificationSettings.desktop ? '23px' : '3px',
+                                    transition: 'left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                                }} />
+                            </div>
+                        </div>
+
+                        {/* Toggle Option: Message Preview */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: 'white', fontSize: '0.9rem' }}>Message Preview</span>
+                            <div
+                                onClick={() => updateNotificationSettings('preview', !notificationSettings.preview)}
+                                style={{
+                                    width: '44px', height: '24px',
+                                    background: notificationSettings.preview ? '#10b981' : 'rgba(255,255,255,0.2)',
+                                    borderRadius: '99px',
+                                    position: 'relative',
+                                    cursor: 'pointer',
+                                    transition: 'background 0.3s ease'
+                                }}
+                            >
+                                <div style={{
+                                    width: '18px', height: '18px',
+                                    background: 'white',
+                                    borderRadius: '50%',
+                                    position: 'absolute',
+                                    top: '3px',
+                                    left: notificationSettings.preview ? '23px' : '3px',
+                                    transition: 'left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                                }} />
+                            </div>
+                        </div>
+                    </div>
 
                     {/* Buttons */}
                     <button
