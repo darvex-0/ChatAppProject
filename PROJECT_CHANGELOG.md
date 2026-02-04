@@ -6,6 +6,7 @@
 **New Features:**
 - **Light Mode UI Polish**:
   - **Contrast Enhancements**: Fixed invisible text issues in sidebar and chat items for light mode.
+  - **Input Area**: Updated chat input bar to match light theme (removed hardcoded dark gray).
   - **Refined Palette**: Adjusted light mode backgrounds to reduce glare and improve separation.
   - **Themes Menu**: Renamed "Dark Mode" to "Themes" in settings to better reflect customization options.
 
