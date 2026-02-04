@@ -12,6 +12,11 @@ service cloud.firestore {
       match /chatSettings/{chatId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+
+      // Starred Messages - users manage their own stars
+      match /starredMessages/{messageId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
     
     // 2. CHATS COLLECTION (Direct & Groups)
