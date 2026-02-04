@@ -17,6 +17,11 @@ service cloud.firestore {
       match /starredMessages/{messageId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+      
+      // Scheduled Messages - users manage their own scheduled messages
+      match /scheduled_messages/{messageId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
     
     // 2. CHATS COLLECTION (Direct & Groups)

@@ -321,3 +321,62 @@ exports.sendPushNotification = functions.firestore.onDocumentCreated("chats/{cha
     logger.error("Error sending batch notifications:", error);
   }
 });
+
+// --- Function 5: checkScheduledMessages (Cron Job) ---
+// Checks for pending scheduled messages every minute
+const { onSchedule } = require("firebase-functions/v2/scheduler");
+
+exports.checkScheduledMessages = onSchedule("every 1 minutes", async (event) => {
+  const now = admin.firestore.Timestamp.now();
+  const db = admin.firestore();
+
+  // Query across all users' scheduled_messages subcollections
+  const querySnapshot = await db.collectionGroup("scheduled_messages")
+    .where("status", "==", "pending")
+    .where("scheduledAt", "<=", now)
+    .get();
+
+  if (querySnapshot.empty) {
+    // console.log("No pending scheduled messages.");
+    return;
+  }
+
+  const promises = querySnapshot.docs.map(async (docSnapshot) => {
+    const msgData = docSnapshot.data();
+    const { chatId, text, sender, senderName, type } = msgData;
+
+    try {
+      // 1. Add to actual chat messages
+      const newMessage = {
+        text: text,
+        sender: sender,
+        senderName: senderName,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        type: type || 'text',
+        status: 'sent',
+        isScheduledWrapper: true // Flag to identify auto-sent messages if needed
+      };
+
+      await db.collection("chats").doc(chatId).collection("messages").add(newMessage);
+
+      // 2. Update Chat Metadata (Last Message)
+      await db.collection("chats").doc(chatId).update({
+        lastMessage: text,
+        lastUpdate: admin.firestore.FieldValue.serverTimestamp()
+        // Note: uncementing unread counts might be complex without a specific target, 
+        // but typically handled by client or separate trigger. 
+        // For now, simpler is better.
+      });
+
+      // 3. Delete the scheduled message doc
+      await docSnapshot.ref.delete();
+
+      logger.info(`Processed scheduled message ${docSnapshot.id} for chat ${chatId}`);
+
+    } catch (error) {
+      logger.error(`Failed to process scheduled message ${docSnapshot.id}:`, error);
+    }
+  });
+
+  await Promise.all(promises);
+});

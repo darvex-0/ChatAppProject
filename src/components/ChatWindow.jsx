@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, storage } from '../services/firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, setDoc, deleteDoc, deleteField, increment, limitToLast } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, setDoc, deleteDoc, deleteField, increment, limitToLast, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
@@ -1157,6 +1157,95 @@ export default function ChatWindow() {
 
     const searchInputRef = useRef(null);
 
+    // --- Message Scheduling State ---
+    const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+    const [scheduledTime, setScheduledTime] = useState("");
+    const [showScheduledList, setShowScheduledList] = useState(false);
+    const [scheduledMessages, setScheduledMessages] = useState([]);
+    const [editingScheduledMsg, setEditingScheduledMsg] = useState(null); // ID of message being edited
+
+    // Load Scheduled Messages
+    useEffect(() => {
+        if (!currentUser) return;
+        const q = query(collection(db, "users", currentUser.uid, "scheduled_messages"), orderBy("scheduledAt", "asc"));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setScheduledMessages(msgs);
+        });
+        return () => unsubscribe();
+    }, [currentUser]);
+
+    const handleScheduleMessage = async (e) => {
+        e.preventDefault();
+        if (!inputText.trim() && !editingScheduledMsg) return; // Allow if editing and text is in state (handled below)
+        // Actually, current logic: new ones need inputText, edited ones need editingScheduledMsg.text
+
+        if (!scheduledTime) return;
+
+        const scheduledDate = new Date(scheduledTime);
+        if (scheduledDate <= new Date()) {
+            showAlert("Please select a future time.");
+            return;
+        }
+
+        try {
+            if (editingScheduledMsg) {
+                // Update existing message
+                await updateDoc(doc(db, "users", currentUser.uid, "scheduled_messages", editingScheduledMsg.id), {
+                    text: editingScheduledMsg.text,
+                    scheduledAt: Timestamp.fromDate(scheduledDate)
+                });
+                showAlert("Message updated.");
+            } else {
+                if (!inputText.trim()) return;
+                // Create new message
+                await addDoc(collection(db, "users", currentUser.uid, "scheduled_messages"), {
+                    text: inputText,
+                    chatId: chatId,
+                    chatName: chatInfo?.name || "Chat",
+                    scheduledAt: Timestamp.fromDate(scheduledDate),
+                    createdAt: serverTimestamp(),
+                    status: 'pending',
+                    type: 'text',
+                    sender: currentUser.uid,
+                    senderName: currentUser.displayName || "User"
+                });
+                setInputText("");
+                showAlert(`Message scheduled for ${scheduledDate.toLocaleString()}`);
+            }
+
+            setScheduledTime("");
+            setEditingScheduledMsg(null);
+            setIsScheduleModalOpen(false);
+        } catch (error) {
+            console.error("Error scheduling message:", error);
+            showAlert("Failed to schedule message.");
+        }
+    };
+
+    // Helper to start editing
+    const startEditingScheduledMsg = (msg) => {
+        setEditingScheduledMsg(msg);
+        // Pre-fill time
+        if (msg.scheduledAt) {
+            const date = msg.scheduledAt.toDate();
+            // Adjust to local ISO string for input
+            const localIso = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+            setScheduledTime(localIso);
+        }
+        setIsScheduleModalOpen(true);
+        setShowScheduledList(false);
+    };
+
+    const deleteScheduledMessage = async (msgId) => {
+        try {
+            await deleteDoc(doc(db, "users", currentUser.uid, "scheduled_messages", msgId));
+            showAlert("Scheduled message canceled.");
+        } catch (error) {
+            console.error("Error preventing scheduled message:", error);
+        }
+    };
+
     // Search Logic
     const performSearch = (text) => {
         setSearchQuery(text);
@@ -1590,7 +1679,41 @@ export default function ChatWindow() {
                         </button>
                         <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} />
 
+                        {/* Scheduled Messages Toggle */}
+                        {scheduledMessages.length > 0 && (
+                            <button
+                                onClick={() => setShowScheduledList(true)}
+                                className="icon-btn"
+                                title="View Scheduled Messages"
+                                style={{
+                                    width: 'auto', height: 'auto', border: 'none', background: 'transparent', padding: '0 4px',
+                                    color: 'var(--primary)'
+                                }}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 600, marginLeft: '4px' }}>{scheduledMessages.length}</span>
+                            </button>
+                        )}
+
+                        {/* Schedule Button */}
+                        <button
+                            onClick={() => {
+                                setEditingScheduledMsg(null); // Clear edit mode
+                                setIsScheduleModalOpen(true);
+                            }}
+                            className="icon-btn"
+                            title="Schedule Message"
+                            disabled={!inputText.trim()}
+                            style={{
+                                width: 'auto', height: 'auto', border: 'none', background: 'transparent', padding: 0,
+                                opacity: inputText.trim() ? 1 : 0.5
+                            }}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        </button>
+
                         <form onSubmit={sendMessage} style={{ flexGrow: 1, display: 'flex', gap: '0.75rem', alignItems: 'center', position: 'relative' }}>
+
                             {showEmojiPicker && ReactDOM.createPortal(
                                 <>
                                     {/* Click outside overlay */}
@@ -1807,6 +1930,116 @@ export default function ChatWindow() {
                         >
                             Cancel
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Scheduled Messages List Modal */}
+            {showScheduledList && (
+                <div className="modal-overlay" style={{ zIndex: 100 }}>
+                    <div className="modal" style={{ maxWidth: '500px', width: '90%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+                        <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                            <h3 style={{ margin: 0 }}>Scheduled Messages</h3>
+                            <button className="close-btn" onClick={() => setShowScheduledList(false)} style={{ background: 'transparent', border: 'none', color: 'var(--app-text)', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+                        </div>
+                        <div className="modal-content" style={{ overflowY: 'auto' }}>
+                            {scheduledMessages.length === 0 ? (
+                                <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No scheduled messages.</p>
+                            ) : (
+                                scheduledMessages.map(msg => (
+                                    <div key={msg.id} style={{
+                                        padding: '12px',
+                                        border: '1px solid var(--border-color)',
+                                        borderRadius: '8px',
+                                        marginBottom: '10px',
+                                        background: 'var(--app-bg-secondary)'
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)' }}>To: {msg.chatName}</span>
+                                            <span style={{ fontSize: '0.8rem', color: 'var(--app-text-muted)' }}>
+                                                {msg.scheduledAt?.toDate().toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--app-text)' }}>{msg.text}</p>
+                                        <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                            <button
+                                                onClick={() => startEditingScheduledMsg(msg)}
+                                                style={{
+                                                    padding: '4px 10px',
+                                                    background: 'rgba(99, 102, 241, 0.1)',
+                                                    color: 'var(--primary)',
+                                                    border: '1px solid var(--primary)',
+                                                    borderRadius: '4px',
+                                                    fontSize: '0.8rem',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => deleteScheduledMessage(msg.id)}
+                                                style={{
+                                                    padding: '4px 10px',
+                                                    background: 'rgba(239, 68, 68, 0.1)',
+                                                    color: '#ef4444',
+                                                    border: '1px solid #ef4444',
+                                                    borderRadius: '4px',
+                                                    fontSize: '0.8rem',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                Unschedule
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Schedule Modal */}
+            {isScheduleModalOpen && (
+                <div className="modal-overlay" style={{ zIndex: 100 }}>
+                    <div className="modal" style={{ maxWidth: '400px', width: '90%' }}>
+                        <div className="modal-header">
+                            <h3>{editingScheduledMsg ? "Edit Scheduled Message" : "Schedule Message"}</h3>
+                            <button className="close-btn" onClick={() => setIsScheduleModalOpen(false)}>×</button>
+                        </div>
+                        <div className="modal-content">
+                            <p style={{ marginBottom: '1rem', color: 'var(--app-text-muted)' }}>
+                                {editingScheduledMsg ? "Update your message details." : "Message will be sent automatically at the selected time."}
+                            </p>
+
+                            {/* If editing, allow editing text */}
+                            {editingScheduledMsg && (
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--app-text)' }}>Message Content</label>
+                                    <textarea
+                                        className="modal-input"
+                                        value={editingScheduledMsg.text}
+                                        onChange={(e) => setEditingScheduledMsg({ ...editingScheduledMsg, text: e.target.value })}
+                                        style={{ width: '100%', minHeight: '60px', resize: 'vertical' }} // Reuse modal-input class for consistency
+                                    />
+                                </div>
+                            )}
+
+                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--app-text)' }}>Date & Time</label>
+                            <input
+                                type="datetime-local"
+                                className="modal-input"
+                                value={scheduledTime}
+                                onChange={(e) => setScheduledTime(e.target.value)}
+                                style={{ width: '100%', marginBottom: '1.5rem' }}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                <button className="modal-btn secondary" onClick={() => setIsScheduleModalOpen(false)}>Cancel</button>
+                                <button className="modal-btn" onClick={handleScheduleMessage} disabled={!scheduledTime}>
+                                    {editingScheduledMsg ? "Update Message" : "Schedule Send"}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

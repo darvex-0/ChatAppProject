@@ -10,8 +10,16 @@
   - **Refined Palette**: Adjusted light mode backgrounds to reduce glare and improve separation.
   - **Themes Menu**: Renamed "Dark Mode" to "Themes" in settings to better reflect customization options.
 
+- **Message Scheduling**:
+  - **Schedule Button**: New clock icon in the chat input area to schedule messages.
+  - **Timezone Support**: Ensures messages are sent at the correct time regardless of your timezone.
+  - **Management**: View, un-schedule, or delete pending messages via the new "Scheduled" list.
+  - **Edit & Reschedule**: Update the text or time of pending messages directly from the list without deleting.
+  - **Auto-Send**: Backend system automatically delivers messages when due, even if you're offline.
+
 **Fixes:**
 - **Invisible Text**: Resolved hardcoded white text in `index.css` that persisted in light mode.
+- **Scheduled Messages Modal**: Moved the close button to the top-right corner using proper spacing for better usability.
 
 
 
