@@ -176,7 +176,7 @@ export default function GroupModal({ onClose }) {
     return (
         <div className="modal-overlay">
             <div className="modal" style={{ maxWidth: '28rem', height: '85vh', display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ color: 'white', marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 600 }}>Create New Group</h3>
+                <h3 style={{ color: 'var(--app-text)', marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 600 }}>Create New Group</h3>
 
                 {/* Top Section: Image + Name */}
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem', flexShrink: 0 }}>
@@ -235,12 +235,12 @@ export default function GroupModal({ onClose }) {
                     flexGrow: 1,
                     overflowY: 'auto',
                     marginBottom: '0.5rem',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '8px',
                     padding: '0.5rem'
                 }}>
                     {friends.length === 0 && (
-                        <div style={{ textAlign: 'center', color: 'gray', padding: '1rem' }}>
+                        <div style={{ textAlign: 'center', color: 'var(--app-text-muted)', padding: '1rem' }}>
                             Loading potential members or no friends found...
                         </div>
                     )}
@@ -254,7 +254,7 @@ export default function GroupModal({ onClose }) {
                                 className={`friend-item ${isSelected ? 'selected' : ''}`}
                                 style={{
                                     display: 'flex', alignItems: 'center', padding: '0.75rem',
-                                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                    borderBottom: '1px solid var(--border-color)',
                                     cursor: 'pointer', borderRadius: '6px',
                                     background: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
                                     border: isSelected ? '1px solid var(--primary)' : '1px solid transparent'
@@ -265,12 +265,12 @@ export default function GroupModal({ onClose }) {
                                     style={{ width: '40px', height: '40px', borderRadius: '50%', marginRight: '10px', objectFit: 'cover' }}
                                 />
                                 <div style={{ flexGrow: 1 }}>
-                                    <h4 style={{ fontSize: '0.9rem', margin: 0, color: 'white' }}>{user.name || "Unknown"}</h4>
-                                    <small style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{user.email}</small>
+                                    <h4 style={{ fontSize: '0.9rem', margin: 0, color: 'var(--app-text)' }}>{user.name || "Unknown"}</h4>
+                                    <small style={{ fontSize: '0.75rem', color: 'var(--app-text-muted)' }}>{user.email}</small>
                                 </div>
                                 <div style={{
                                     width: '20px', height: '20px', borderRadius: '50%',
-                                    border: isSelected ? '2px solid var(--primary)' : '2px solid #94a3b8',
+                                    border: isSelected ? '2px solid var(--primary)' : '2px solid var(--app-text-muted)',
                                     background: isSelected ? 'var(--primary)' : 'transparent',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     color: 'white', fontSize: '12px'
@@ -283,8 +283,8 @@ export default function GroupModal({ onClose }) {
                 </div>
 
                 {/* Manual Add Section */}
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.75rem', marginBottom: '1rem', flexShrink: 0 }}>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--gray)', marginBottom: '0.5rem' }}>Or add someone new by email:</p>
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', marginBottom: '1rem', flexShrink: 0 }}>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--app-text-muted)', marginBottom: '0.5rem' }}>Or add someone new by email:</p>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <input
                             className="modal-input"

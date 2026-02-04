@@ -24,17 +24,17 @@ export default function NotificationToast({ message, data, onClose }) {
                 top: '1rem',
                 left: '50%',
                 transform: 'translateX(-50%)',
-                background: '#1e293b',
-                color: 'white',
+                background: 'var(--modal-bg)',
+                color: 'var(--app-text)',
                 padding: '0.75rem 1rem',
                 borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                boxShadow: 'var(--modal-shadow)',
                 zIndex: 9999,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '1rem',
                 cursor: 'pointer',
-                border: '1px solid #334155',
+                border: '1px solid var(--border-color)',
                 minWidth: '300px',
                 animation: 'slideDown 0.3s ease-out'
             }}
@@ -42,7 +42,7 @@ export default function NotificationToast({ message, data, onClose }) {
             <div style={{ fontSize: '1.25rem' }}>💬</div>
             <div style={{ flexGrow: 1 }}>
                 <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{data?.title || 'New Message'}</div>
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{data?.body || message}</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--app-text-muted)' }}>{data?.body || message}</div>
             </div>
             <button
                 onClick={(e) => { e.stopPropagation(); onClose(); }}

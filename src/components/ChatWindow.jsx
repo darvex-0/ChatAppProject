@@ -197,7 +197,7 @@ export default function ChatWindow() {
     };
 
     // Refs for Sound Logic
-    const notificationSound = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'));
+    const notificationSound = useRef(new Audio('https://upload.wikimedia.org/wikipedia/commons/3/34/Sound_Effect_-_Pop_01.ogg'));
     const lastMessageIdRef = useRef(null);
     const isInitialLoad = useRef(true);
     const previousChatIdRef = useRef(chatId);
@@ -1231,7 +1231,7 @@ export default function ChatWindow() {
         <div className="flex flex-col h-full w-full overflow-hidden">
 
             {/* Header */}
-            <div style={{ zIndex: 50, background: 'rgba(15, 23, 42, 0.8)', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', flexShrink: 0, position: 'relative' }}>
+            <div style={{ zIndex: 50, background: 'var(--header-bg)', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', backdropFilter: 'blur(10px)', flexShrink: 0, position: 'relative' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <button onClick={() => navigate('/')} className="back-btn" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginRight: '0.5rem', padding: '0.25rem 0.5rem', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '6px', color: 'var(--primary-light)', cursor: 'pointer', fontSize: '0.75rem' }}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> Back
@@ -1244,7 +1244,7 @@ export default function ChatWindow() {
                                 {chatInfo?.type === 'group' ? '👥' : '👤'}
                             </div>
                         )}
-                        <span style={{ color: 'white', fontWeight: 500 }}>{chatInfo?.name || "Chat"}</span>
+                        <span style={{ color: 'var(--app-text)', fontWeight: 500 }}>{chatInfo?.name || "Chat"}</span>
                     </div>
                 </div>
 
@@ -1340,8 +1340,8 @@ export default function ChatWindow() {
                 const currentPin = pinnedMessages[safeIndex];
                 return (
                     <div style={{
-                        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%)',
-                        borderBottom: '1px solid rgba(99, 102, 241, 0.3)',
+                        background: 'var(--input-bg)',
+                        borderBottom: '1px solid var(--border-color)',
                         padding: '10px 12px',
                         display: 'flex',
                         alignItems: 'center',
@@ -1374,7 +1374,7 @@ export default function ChatWindow() {
                             <div
                                 style={{
                                     fontSize: '0.85rem',
-                                    color: 'white',
+                                    color: 'var(--app-text)',
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
@@ -1430,7 +1430,7 @@ export default function ChatWindow() {
                     WebkitOverflowScrolling: 'touch'
                 }}
             >
-                {wallpaper && <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(15, 23, 42, 0.4)', pointerEvents: 'none', zIndex: 0 }} />}
+                {wallpaper && <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'var(--modal-overlay)', pointerEvents: 'none', zIndex: 0 }} />}
                 <Virtuoso
                     key={chatId}
                     ref={virtuosoRef}
@@ -1478,8 +1478,8 @@ export default function ChatWindow() {
                         <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                                 <span style={{ color: '#6366f1', fontSize: '1.2rem' }}>🎤</span>
-                                <span style={{ color: 'white', fontSize: '0.9rem', fontWeight: 500 }}>Saved Voice Message</span>
-                                <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>({formatDuration(voiceDraft.duration)})</span>
+                                <span style={{ color: 'var(--app-text)', fontSize: '0.9rem', fontWeight: 500 }}>Saved Voice Message</span>
+                                <span style={{ color: 'var(--app-text-muted)', fontSize: '0.85rem' }}>({formatDuration(voiceDraft.duration)})</span>
                             </div>
                             <audio src={voiceDraft.previewUrl} controls style={{ width: '100%', height: '32px', marginTop: '4px' }} />
                         </div>
@@ -1550,7 +1550,7 @@ export default function ChatWindow() {
                                 width: '10px', height: '10px', background: '#ef4444', borderRadius: '50%',
                                 animation: 'pulse 1s infinite'
                             }}></div>
-                            <span style={{ fontSize: '1.1rem', fontWeight: 500, color: 'white', minWidth: '45px' }}>
+                            <span style={{ fontSize: '1.1rem', fontWeight: 500, color: 'var(--app-text)', minWidth: '45px' }}>
                                 {formatDuration(recordingDuration)}
                             </span>
                         </div>

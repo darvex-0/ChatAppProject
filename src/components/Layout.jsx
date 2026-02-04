@@ -41,7 +41,7 @@ export default function Layout() {
                         className="logo"
                         style={{ cursor: 'pointer' }}
                     >
-                        <span style={{ color: 'white', marginRight: '5px' }}>💬</span>
+                        <span style={{ color: 'var(--app-text)', marginRight: '5px' }}>💬</span>
                         <span>ConnectHub</span>
                     </div>
 

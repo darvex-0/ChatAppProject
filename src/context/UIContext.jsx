@@ -10,6 +10,18 @@ export function UIProvider({ children }) {
     // Notification State
     const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
 
+    // Theme State
+    const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }, [theme]);
+
+    const toggleTheme = () => {
+        setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    };
+
     // Notification Settings (Persisted)
     const [notificationSettings, setNotificationSettings] = useState(() => {
         const saved = localStorage.getItem('notificationSettings');
@@ -83,6 +95,7 @@ export function UIProvider({ children }) {
             alert, showAlert, closeAlert,
             notificationPermission, requestNotificationPermission,
             notificationSettings, updateNotificationSettings,
+            theme, toggleTheme,
             toast, showToast, closeToast
         }}>
             {children}

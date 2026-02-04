@@ -10,7 +10,7 @@ import getCroppedImg from '../../utils/cropImage';
 
 export default function SettingsModal({ onClose }) {
     const { currentUser, logout } = useAuth();
-    const { notificationSettings, updateNotificationSettings } = useUI();
+    const { notificationSettings, updateNotificationSettings, theme, toggleTheme } = useUI();
     const [username, setUsername] = useState(currentUser?.displayName || "");
     const [status, setStatus] = useState("");
     const [saving, setSaving] = useState(false);
@@ -133,9 +133,9 @@ export default function SettingsModal({ onClose }) {
     return (
         <>
             <div className="modal-overlay">
-                <div className="modal" style={{ maxWidth: '400px' }}>
+                <div className="modal" style={{ maxWidth: '400px', background: 'var(--modal-bg)' }}>
 
-                    <h3 style={{ color: 'white', marginBottom: '1.25rem', fontSize: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    <h3 style={{ color: 'var(--app-text)', marginBottom: '1.25rem', fontSize: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                         Settings
                     </h3>
@@ -166,41 +166,80 @@ export default function SettingsModal({ onClose }) {
                     />
 
                     {/* Username Input */}
-                    <label style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '4px', display: 'block' }}>Display Name</label>
+                    <label style={{ color: 'var(--gray)', fontSize: '0.8rem', marginBottom: '4px', display: 'block' }}>Display Name</label>
                     <input
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         placeholder="Enter your name"
                         maxLength={50}
                         className="modal-input"
-                        style={{ width: '100%', padding: '0.75rem 1rem', background: 'rgba(30, 41, 59, 0.7)', color: 'white', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem' }}
+                        style={{ width: '100%', padding: '0.75rem 1rem', background: 'var(--input-bg)', color: 'var(--app-text)', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem' }}
                     />
 
                     {/* Status Input */}
-                    <label style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '4px', display: 'block' }}>About / Status</label>
+                    <label style={{ color: 'var(--gray)', fontSize: '0.8rem', marginBottom: '4px', display: 'block' }}>About / Status</label>
                     <input
                         value={status}
                         onChange={(e) => setStatus(e.target.value)}
                         placeholder="What's on your mind?"
                         maxLength={100}
                         className="modal-input"
-                        style={{ width: '100%', padding: '0.75rem 1rem', background: 'rgba(30, 41, 59, 0.7)', color: 'white', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem' }}
+                        style={{ width: '100%', padding: '0.75rem 1rem', background: 'var(--input-bg)', color: 'var(--app-text)', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem' }}
                     />
 
+                    {/* Appearance Section */}
+                    <div style={{ marginBottom: '1.5rem', marginTop: '0.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                        <h4 style={{ color: 'var(--gray)', fontSize: '0.9rem', marginBottom: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '1.1rem' }}>🎨</span> Appearance
+                        </h4>
+
+                        {/* Toggle Option: Dark Mode */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: 'var(--app-text)', fontSize: '0.9rem' }}> Themes </span>
+                            <div
+                                onClick={toggleTheme}
+                                style={{
+                                    width: '44px', height: '24px',
+                                    background: theme === 'dark' ? '#10b981' : 'rgba(148, 163, 184, 0.3)',
+                                    borderRadius: '99px',
+                                    position: 'relative',
+                                    cursor: 'pointer',
+                                    transition: 'background 0.3s ease'
+                                }}
+                            >
+                                <div style={{
+                                    width: '18px', height: '18px',
+                                    background: 'white',
+                                    borderRadius: '50%',
+                                    position: 'absolute',
+                                    top: '3px',
+                                    left: theme === 'dark' ? '23px' : '3px',
+                                    transition: 'left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '10px'
+                                }}>
+                                    {theme === 'dark' ? '🌙' : '☀️'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Notification Settings Section */}
-                    <div style={{ marginBottom: '1.5rem', marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
-                        <h4 style={{ color: '#cbd5e1', fontSize: '0.9rem', marginBottom: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ marginBottom: '1.5rem', marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                        <h4 style={{ color: 'var(--gray)', fontSize: '0.9rem', marginBottom: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ fontSize: '1.1rem' }}>🔔</span> Notification Settings
                         </h4>
 
                         {/* Toggle Option: Sound */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                            <span style={{ color: 'white', fontSize: '0.9rem' }}>Sound Effects</span>
+                            <span style={{ color: 'var(--app-text)', fontSize: '0.9rem' }}>Sound Effects</span>
                             <div
                                 onClick={() => updateNotificationSettings('sound', !notificationSettings.sound)}
                                 style={{
                                     width: '44px', height: '24px',
-                                    background: notificationSettings.sound ? '#10b981' : 'rgba(255,255,255,0.2)',
+                                    background: notificationSettings.sound ? '#10b981' : 'rgba(148, 163, 184, 0.3)',
                                     borderRadius: '99px',
                                     position: 'relative',
                                     cursor: 'pointer',
@@ -221,12 +260,12 @@ export default function SettingsModal({ onClose }) {
 
                         {/* Toggle Option: Desktop Notifications */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                            <span style={{ color: 'white', fontSize: '0.9rem' }}>Desktop Notifications</span>
+                            <span style={{ color: 'var(--app-text)', fontSize: '0.9rem' }}>Desktop Notifications</span>
                             <div
                                 onClick={() => updateNotificationSettings('desktop', !notificationSettings.desktop)}
                                 style={{
                                     width: '44px', height: '24px',
-                                    background: notificationSettings.desktop ? '#10b981' : 'rgba(255,255,255,0.2)',
+                                    background: notificationSettings.desktop ? '#10b981' : 'rgba(148, 163, 184, 0.3)',
                                     borderRadius: '99px',
                                     position: 'relative',
                                     cursor: 'pointer',
@@ -247,12 +286,12 @@ export default function SettingsModal({ onClose }) {
 
                         {/* Toggle Option: Message Preview */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: 'white', fontSize: '0.9rem' }}>Message Preview</span>
+                            <span style={{ color: 'var(--app-text)', fontSize: '0.9rem' }}>Message Preview</span>
                             <div
                                 onClick={() => updateNotificationSettings('preview', !notificationSettings.preview)}
                                 style={{
                                     width: '44px', height: '24px',
-                                    background: notificationSettings.preview ? '#10b981' : 'rgba(255,255,255,0.2)',
+                                    background: notificationSettings.preview ? '#10b981' : 'rgba(148, 163, 184, 0.3)',
                                     borderRadius: '99px',
                                     position: 'relative',
                                     cursor: 'pointer',
@@ -302,7 +341,7 @@ export default function SettingsModal({ onClose }) {
 
             {/* Cropper Overlay */}
             {imageSrc && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.95)', zIndex: 1100, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'var(--modal-overlay)', zIndex: 1100, display: 'flex', flexDirection: 'column' }}>
                     {/* Cropper Area */}
                     <div style={{ position: 'relative', flexGrow: 1 }}>
                         <Cropper
@@ -320,7 +359,7 @@ export default function SettingsModal({ onClose }) {
 
                     {/* Zoom Slider */}
                     <div style={{ padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
-                        <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Zoom</span>
+                        <span style={{ color: 'var(--app-text-muted)', fontSize: '0.8rem' }}>Zoom</span>
                         <input
                             type="range"
                             min={1}
@@ -337,7 +376,7 @@ export default function SettingsModal({ onClose }) {
                         <button
                             onClick={cancelCrop}
                             disabled={uploadingPhoto}
-                            style={{ padding: '0.75rem 1.5rem', background: '#334155', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+                            style={{ padding: '0.75rem 1.5rem', background: 'var(--app-bg-secondary)', color: 'var(--app-text)', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
                         >
                             Cancel
                         </button>

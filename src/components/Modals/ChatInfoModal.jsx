@@ -198,15 +198,15 @@ export default function ChatInfoModal({ chatId, onClose }) {
                             <img
                                 src={chatPhoto}
                                 alt=""
-                                style={{ width: '96px', height: '96px', borderRadius: '50%', objectFit: 'cover', border: 'none', marginBottom: '1rem', background: '#6366f1' }}
+                                style={{ width: '96px', height: '96px', borderRadius: '50%', objectFit: 'cover', border: 'none', marginBottom: '1rem', background: 'var(--primary)' }}
                             />
                         ) : (
-                            <div style={{ width: '96px', height: '96px', borderRadius: '50%', background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', fontSize: '2.5rem', color: 'white', fontWeight: 500 }}>
+                            <div style={{ width: '96px', height: '96px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', fontSize: '2.5rem', color: 'white', fontWeight: 500 }}>
                                 {chatName.charAt(0).toUpperCase()}
                             </div>
                         )}
-                        <h2 style={{ color: 'white', fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.25rem' }}>{chatName}</h2>
-                        <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>{subtitle}</p>
+                        <h2 style={{ color: 'var(--app-text)', fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.25rem' }}>{chatName}</h2>
+                        <p style={{ color: 'var(--app-text-muted)', fontSize: '0.9rem' }}>{subtitle}</p>
 
                         {/* Status for Private Chats */}
                         {!isGroup && (
@@ -222,7 +222,7 @@ export default function ChatInfoModal({ chatId, onClose }) {
                                 maxWidth: '250px'
                             }}>
                                 <span style={{ fontSize: '1rem' }}>💭</span>
-                                <span style={{ color: '#e2e8f0', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                                <span style={{ color: 'var(--app-text)', fontSize: '0.85rem', fontStyle: 'italic' }}>
                                     {members[0]?.status || "No status set"}
                                 </span>
                             </div>
@@ -232,7 +232,7 @@ export default function ChatInfoModal({ chatId, onClose }) {
                     {/* Members List */}
                     {isGroup && (
                         <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
-                            <h4 style={{ color: '#6366f1', fontSize: '0.9rem', marginBottom: '0.75rem', paddingBottom: '0.25rem', borderBottom: '1px solid #1e293b' }}>Members</h4>
+                            <h4 style={{ color: '#6366f1', fontSize: '0.9rem', marginBottom: '0.75rem', paddingBottom: '0.25rem', borderBottom: '1px solid var(--border-color)' }}>Members</h4>
 
                             <div style={{ maxHeight: '220px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                 {members.map(member => (
@@ -240,12 +240,12 @@ export default function ChatInfoModal({ chatId, onClose }) {
                                         <img src={member.photoURL || `https://ui-avatars.com/api/?name=${member.name}&background=random`} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
 
                                         <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                                            <div style={{ color: 'white', fontWeight: 500, display: 'flex', alignItems: 'center', fontSize: '0.9rem' }}>
+                                            <div style={{ color: 'var(--app-text)', fontWeight: 500, display: 'flex', alignItems: 'center', fontSize: '0.9rem' }}>
                                                 {member.name || "User"}
-                                                {member.uid === currentUser.uid && <span style={{ color: '#94a3b8', marginLeft: '4px', fontWeight: 400 }}>(You)</span>}
-                                                {member.isAdmin && <span style={{ color: '#fbbf24', fontSize: '0.7rem', border: '1px solid #fbbf24', padding: '0 4px', borderRadius: '4px', marginLeft: '6px', lineHeight: 1 }}>ADMIN</span>}
+                                                {member.uid === currentUser.uid && <span style={{ color: 'var(--app-text-muted)', marginLeft: '4px', fontWeight: 400 }}>(You)</span>}
+                                                {member.isAdmin && <span style={{ color: 'var(--warning, #fbbf24)', fontSize: '0.7rem', border: '1px solid var(--warning, #fbbf24)', padding: '0 4px', borderRadius: '4px', marginLeft: '6px', lineHeight: 1 }}>ADMIN</span>}
                                             </div>
-                                            <div style={{ color: '#64748b', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.email}</div>
+                                            <div style={{ color: 'var(--app-text-muted)', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.email}</div>
                                         </div>
 
                                         {/* Admin Actions */}
@@ -254,14 +254,14 @@ export default function ChatInfoModal({ chatId, onClose }) {
                                                 {!member.isAdmin && (
                                                     <button
                                                         onClick={() => promoteMember(member.uid, member.name)}
-                                                        style={{ background: 'none', border: '1px solid #10b981', color: '#10b981', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
+                                                        style={{ background: 'none', border: '1px solid var(--success, #10b981)', color: 'var(--success, #10b981)', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
                                                     >
                                                         Promote
                                                     </button>
                                                 )}
                                                 <button
                                                     onClick={() => kickMember(member.uid, member.name)}
-                                                    style={{ background: 'none', border: '1px solid #ef4444', color: '#ef4444', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
+                                                    style={{ background: 'none', border: '1px solid var(--danger)', color: 'var(--danger)', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
                                                 >
                                                     Kick
                                                 </button>
@@ -279,13 +279,13 @@ export default function ChatInfoModal({ chatId, onClose }) {
                             <>
                                 <button
                                     onClick={() => setShowAddMember(true)}
-                                    style={{ width: '100%', padding: '0.875rem', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.5)' }}
+                                    style={{ width: '100%', padding: '0.875rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.4)' }}
                                 >
                                     Add Member
                                 </button>
                                 <button
                                     onClick={leaveGroup}
-                                    style={{ width: '100%', padding: '0.875rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.5)' }}
+                                    style={{ width: '100%', padding: '0.875rem', background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.4)' }}
                                 >
                                     Leave Group
                                 </button>
@@ -293,13 +293,13 @@ export default function ChatInfoModal({ chatId, onClose }) {
                         )}
                         <button
                             onClick={() => setShowMedia(true)}
-                            style={{ width: '100%', padding: '0.875rem', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.5)' }}
+                            style={{ width: '100%', padding: '0.875rem', background: 'var(--success, #10b981)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.4)' }}
                         >
                             📷 View Media
                         </button>
                         <button
                             onClick={onClose}
-                            style={{ width: '100%', padding: '0.875rem', background: '#0f172a', color: '#94a3b8', border: '1px solid #334155', borderRadius: '8px', fontSize: '1rem', fontWeight: 600, cursor: 'pointer' }}
+                            style={{ width: '100%', padding: '0.875rem', background: 'transparent', color: 'var(--app-text-muted)', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '1rem', fontWeight: 600, cursor: 'pointer' }}
                         >
                             Close
                         </button>

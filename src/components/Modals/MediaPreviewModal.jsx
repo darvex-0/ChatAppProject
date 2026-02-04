@@ -273,7 +273,7 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
             left: 0,
             width: '100%',
             height: '100%',
-            background: 'rgba(0, 0, 0, 0.98)',
+            background: 'var(--modal-bg)',
             zIndex: 1100,
             display: 'flex',
             flexDirection: 'column',
@@ -284,13 +284,13 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: '1px solid rgba(255,255,255,0.1)',
+            borderBottom: '1px solid var(--border-color)',
             minHeight: '56px'
         },
         closeBtn: {
             background: 'none',
             border: 'none',
-            color: 'white',
+            color: 'var(--app-text)',
             fontSize: '24px',
             cursor: 'pointer',
             padding: '8px',
@@ -299,7 +299,7 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
             justifyContent: 'center'
         },
         fileName: {
-            color: '#94a3b8',
+            color: 'var(--app-text-muted)',
             fontSize: '13px',
             textAlign: 'center',
             flex: 1,
@@ -341,8 +341,8 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
             gridTemplateColumns: 'repeat(5, 1fr)',
             gap: '8px',
             padding: '12px',
-            background: 'rgba(15, 23, 42, 0.95)',
-            borderTop: '1px solid rgba(255,255,255,0.1)',
+            background: 'var(--input-bg)',
+            borderTop: '1px solid var(--border-color)',
             maxHeight: '120px',
             overflowY: 'auto'
         },
@@ -373,7 +373,7 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
         },
         filterName: {
             fontSize: '10px',
-            color: '#94a3b8',
+            color: 'var(--app-text-muted)',
             textAlign: 'center'
         },
         footer: {
@@ -381,16 +381,16 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
-            borderTop: '1px solid rgba(255,255,255,0.1)',
-            background: 'rgba(15, 23, 42, 0.8)'
+            borderTop: '1px solid var(--border-color)',
+            background: 'var(--modal-bg)'
         },
         captionInput: {
             flex: 1,
             padding: '12px 16px',
-            background: 'rgba(30, 41, 59, 0.9)',
-            border: '1px solid rgba(99, 102, 241, 0.3)',
+            background: 'var(--input-bg)',
+            border: '1px solid var(--border-color)',
             borderRadius: '24px',
-            color: 'white',
+            color: 'var(--app-text)',
             fontSize: '15px',
             outline: 'none'
         },
@@ -503,7 +503,7 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
                         flexDirection: 'column',
                         alignItems: 'center',
                         gap: '16px',
-                        color: 'white'
+                        color: 'var(--app-text)'
                     }}>
                         <div style={{
                             width: '80px',
@@ -518,7 +518,7 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
                             📄
                         </div>
                         <span style={{ fontSize: '16px', fontWeight: 500 }}>{file?.name}</span>
-                        <span style={{ color: '#94a3b8' }}>{formatFileSize(file?.size)}</span>
+                        <span style={{ color: 'var(--app-text-muted)' }}>{formatFileSize(file?.size)}</span>
                     </div>
                 )}
             </div>
@@ -527,8 +527,8 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
             {showTrimmer && isVideo && videoDuration > 0 && (
                 <div style={{
                     padding: '16px',
-                    background: 'rgba(15, 23, 42, 0.95)',
-                    borderTop: '1px solid rgba(255,255,255,0.1)'
+                    background: 'var(--input-bg)',
+                    borderTop: '1px solid var(--border-color)'
                 }}>
                     {/* Time display */}
                     <div style={{
@@ -536,7 +536,7 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
                         justifyContent: 'space-between',
                         marginBottom: '12px',
                         fontSize: '13px',
-                        color: '#94a3b8'
+                        color: 'var(--app-text-muted)'
                     }}>
                         <span>{formatTime(trimStart)}</span>
                         <span style={{ color: 'var(--primary)', fontWeight: 600 }}>
@@ -551,7 +551,7 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
                         style={{
                             position: 'relative',
                             height: '60px',
-                            background: 'rgba(51, 65, 85, 0.8)',
+                            background: 'var(--app-bg-secondary)',
                             borderRadius: '8px',
                             overflow: 'hidden',
                             touchAction: 'none'
@@ -756,10 +756,10 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '16px',
-                    borderTop: '1px solid rgba(255,255,255,0.1)',
-                    background: 'rgba(15, 23, 42, 0.95)'
+                    borderTop: '1px solid var(--border-color)',
+                    background: 'var(--input-bg)'
                 }}>
-                    <span style={{ color: '#94a3b8', fontSize: '13px' }}>Zoom</span>
+                    <span style={{ color: 'var(--app-text-muted)', fontSize: '13px' }}>Zoom</span>
                     <input
                         type="range"
                         min={1}
@@ -777,8 +777,8 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
                         onClick={() => setShowCropper(false)}
                         style={{
                             padding: '10px 20px',
-                            background: '#334155',
-                            color: 'white',
+                            background: 'var(--app-bg-secondary)',
+                            color: 'var(--app-text)',
                             border: 'none',
                             borderRadius: '20px',
                             cursor: 'pointer',

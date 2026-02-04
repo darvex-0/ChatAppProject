@@ -10,12 +10,83 @@
     --primary-light: #818cf8;
     --primary-dark: #4f46e5;
     --secondary: #f472b6;
-    --dark: #1e293b;
-    --darker: #0f172a;
-    --light: #f8fafc;
+
+    /* Core Absolute Colors (Unchanging Reference) */
+    --absolute-dark: #1e293b;
+    --absolute-darker: #0f172a;
+    --absolute-light: #f8fafc;
+    --absolute-white: #ffffff;
+
+    /* Semantic Aliases (Default: Dark Mode) */
+    --app-bg: var(--absolute-darker);
+    --app-bg-secondary: var(--absolute-dark);
+    --app-text: var(--absolute-light);
+    --app-text-muted: #94a3b8;
+
+    --modal-bg: var(--absolute-dark);
+    --modal-overlay: rgba(0, 0, 0, 0.7);
+    --modal-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+
+    --input-bg: rgba(30, 41, 59, 0.7);
+    --border-color: rgba(255, 255, 255, 0.1);
+
+    --header-bg: rgba(15, 23, 42, 0.8);
+    --system-msg-bg: rgba(255, 255, 255, 0.1);
+    --system-msg-text: #cbd5e1;
+
+    /* Legacy Mappings (To avoid breaking existing code immediately) */
+    --dark: var(--absolute-dark);
+    --darker: var(--absolute-darker);
+    --light: var(--absolute-light);
     --gray: #94a3b8;
     --success: #10b981;
+    --success: #10b981;
     --danger: #ef4444;
+    --warning: #fbbf24;
+  }
+
+  [data-theme="light"] {
+    /* Premium Light Mode Overrides */
+
+    /* FLIP: Background becomes Light/White */
+    --app-bg: #f1f5f9;
+    /* Slate-100 - Slightly darker than white for better contrast */
+    --app-bg-secondary: #e2e8f0;
+    --app-text: #0f172a;
+    /* Slate-900 */
+    --app-text-muted: #64748b;
+    /* Slate-500 */
+
+    --modal-bg: #ffffff;
+    --modal-overlay: rgba(0, 0, 0, 0.2);
+    /* Darker overlay for better contrast */
+    --modal-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    /* Big, soft shadow */
+
+    --input-bg: #f1f5f9;
+    /* Slate-100 */
+    --border-color: #e2e8f0;
+    /* Slate-200 - Critical for Definition */
+
+    --header-bg: rgba(255, 255, 255, 0.85);
+    --system-msg-bg: rgba(0, 0, 0, 0.05);
+    /* Subtle dark background for system msgs */
+    --system-msg-text: #475569;
+
+    /* Legacy Mappings Flip */
+    --dark: #ffffff;
+    /* Background becomes white */
+    --darker: #f0f4f8;
+    /* Deep background becomes light gray */
+    --light: #0f172a;
+    /* Text becomes dark */
+    --gray: #64748b;
+    --success: #059669;
+    /* Darker green for contrast */
+    --danger: #dc2626;
+    /* Darker red for contrast */
+    --warning: #d97706;
+    /* Darker amber for contrast */
   }
 
   * {
@@ -30,8 +101,8 @@
 
   body {
     font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
-    color: var(--light);
+    background: linear-gradient(135deg, var(--app-bg) 0%, var(--app-bg-secondary) 100%);
+    color: var(--app-text);
     height: 100vh;
     width: 100vw;
     display: flex;
@@ -69,16 +140,16 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(15, 23, 42, 0.8);
+    background: var(--header-bg);
     padding: 1rem 1.5rem;
     font-size: 1.25rem;
     font-weight: 600;
-    color: white;
+    color: var(--app-text);
     backdrop-filter: blur(10px);
     position: relative;
     z-index: 50;
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--border-color);
   }
 
   /* ... skipping ... */
@@ -98,6 +169,32 @@
     /* Fix: Ensure it's above messages */
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
     min-width: 160px;
+  }
+
+  .modal {
+    background: var(--modal-bg);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    position: relative;
+    z-index: 1001;
+    overflow-y: auto;
+    max-height: 90vh;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
   }
 
   .logo {
@@ -134,7 +231,7 @@
 
   .icon-btn:hover {
     background: rgba(99, 102, 241, 0.2);
-    color: white;
+    color: var(--primary);
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
   }
@@ -166,7 +263,7 @@
   }
 
   .inbox-title {
-    color: white;
+    color: var(--app-text);
     font-size: 1.5rem;
     font-weight: 600;
     display: flex;
@@ -182,7 +279,7 @@
 
   .chat-item {
     padding: 1rem;
-    background: rgba(30, 41, 59, 0.7);
+    background: var(--input-bg);
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -218,7 +315,7 @@
 
   .chat-item strong {
     font-size: 1rem;
-    color: white;
+    color: var(--app-text);
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -356,8 +453,8 @@
   /* System Message (WhatsApp Style) */
   .message.system {
     align-self: center !important;
-    background: rgba(255, 255, 255, 0.1);
-    color: #cbd5e1;
+    background: var(--system-msg-bg);
+    color: var(--system-msg-text);
     font-size: 0.75rem;
     padding: 0.25rem 0.75rem;
     border-radius: 99px;
@@ -390,8 +487,8 @@
     padding: 0.875rem 1.25rem;
     border: 1px solid rgba(99, 102, 241, 0.3);
     border-radius: 12px;
-    background: rgba(30, 41, 59, 0.7);
-    color: white;
+    background: var(--input-bg);
+    color: var(--app-text);
     font-size: 1rem;
     transition: all 0.3s ease;
     resize: none;
@@ -493,8 +590,8 @@
     position: absolute;
     top: 50px;
     right: 20px;
-    background: #1e293b;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--modal-bg);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 0.5rem;
     display: flex;
@@ -506,7 +603,7 @@
 
   .dropdown-item {
     padding: 0.5rem 1rem;
-    color: white;
+    color: var(--app-text);
     cursor: pointer;
     border-radius: 4px;
     transition: background 0.2s;
@@ -543,9 +640,9 @@
 
   .search-input {
     flex-grow: 1;
-    background: rgba(30, 41, 59, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--app-text);
     padding: 0.4rem 0.8rem;
     border-radius: 6px;
     font-size: 0.9rem;
@@ -744,8 +841,8 @@
     top: auto;
     left: auto;
     transform: none;
-    background: rgba(15, 23, 42, 0.95);
-    border: 1px solid rgba(99, 102, 241, 0.3);
+    background: var(--modal-bg);
+    border: 1px solid var(--border-color);
     border-radius: 16px;
     padding: 1.5rem;
     width: 100%;
@@ -773,7 +870,7 @@
   }
 
   .modal h3 {
-    color: white;
+    color: var(--app-text);
     margin-bottom: 1.25rem;
     font-size: 1.25rem;
     font-weight: 600;
@@ -786,9 +883,9 @@
   .modal-input {
     width: 100%;
     padding: 0.75rem 1rem;
-    background: rgba(30, 41, 59, 0.7);
-    color: white;
-    border: 1px solid rgba(99, 102, 241, 0.3);
+    background: var(--input-bg);
+    color: var(--app-text);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     margin-bottom: 1rem;
     font-size: 0.875rem;

@@ -60,7 +60,7 @@ export default function Sidebar() {
     // Notification Logic (Sound & Desktop)
     const prevUnreadCountsRef = useRef({});
     const isFirstLoadRef = useRef(true);
-    const audioRef = useRef(new Audio("https://cdn.pixabay.com/download/audio/2022/03/15/audio_2756ae75e3.mp3?filename=notification-sound-7062.mp3")); // Clean "Ding" sound
+    const audioRef = useRef(new Audio("https://upload.wikimedia.org/wikipedia/commons/3/34/Sound_Effect_-_Pop_01.ogg")); // Reliable "Pop" sound
 
     useEffect(() => {
         if (!chats.length) return;
@@ -251,15 +251,15 @@ export default function Sidebar() {
                             width: '100%',
                             padding: '0.6rem 1rem',
                             borderRadius: '8px',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            background: 'rgba(0,0,0,0.2)',
-                            color: 'white',
+                            border: '1px solid var(--border-color)',
+                            background: 'var(--input-bg)',
+                            color: 'var(--app-text)',
                             fontSize: '0.9rem',
                             outline: 'none',
                             transition: 'all 0.2s'
                         }}
-                        onFocus={(e) => e.target.style.background = 'rgba(0,0,0,0.4)'}
-                        onBlur={(e) => e.target.style.background = 'rgba(0,0,0,0.2)'}
+                        onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                        onBlur={(e) => e.target.style.borderColor = 'var(--border-color)'}
                     />
                 </div>
 
@@ -337,7 +337,7 @@ export default function Sidebar() {
                         {chat.displayPic ? (
                             <img src={chat.displayPic} alt="" className="profile-pic" />
                         ) : (
-                            <div className="profile-pic" style={{ background: 'rgba(55, 65, 81, 1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' }}>
+                            <div className="profile-pic" style={{ background: 'var(--input-bg)', color: 'var(--app-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' }}>
                                 {chat.type === 'group' ? '👥' : '👤'}
                             </div>
                         )}
@@ -356,7 +356,7 @@ export default function Sidebar() {
                                 </strong>
                                 {chat.unreadCounts?.[currentUser.uid] > 0 && (
                                     <span style={{
-                                        background: '#ef4444',
+                                        background: 'var(--danger)',
                                         color: 'white',
                                         borderRadius: '50%',
                                         width: '20px',

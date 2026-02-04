@@ -65,18 +65,18 @@ export default function WallpaperModal({ isOpen, onClose, onUpdateWallpaper }) {
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-            background: 'rgba(0,0,0,0.85)', zIndex: 3000,
+            background: 'var(--modal-overlay)', zIndex: 3000,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             backdropFilter: 'blur(5px)'
         }}>
             <div style={{
-                background: '#0f172a', padding: '2rem', borderRadius: '16px',
-                border: '1px solid var(--primary)', maxWidth: '500px', width: '90%',
-                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+                background: 'var(--modal-bg)', padding: '2rem', borderRadius: '16px',
+                border: '1px solid var(--border-color)', maxWidth: '500px', width: '90%',
+                boxShadow: 'var(--modal-shadow)',
                 maxHeight: '80vh', overflowY: 'auto'
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h2 style={{ color: 'white', fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>🎨 Chat Wallpaper</h2>
+                    <h2 style={{ color: 'var(--app-text)', fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>🎨 Chat Wallpaper</h2>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.5rem' }}>&times;</button>
                 </div>
 
@@ -95,9 +95,9 @@ export default function WallpaperModal({ isOpen, onClose, onUpdateWallpaper }) {
                         disabled={uploading}
                         style={{
                             width: '100%', padding: '0.75rem',
-                            background: 'rgba(255,255,255,0.05)',
-                            border: '1px dashed rgba(255,255,255,0.2)',
-                            borderRadius: '8px', color: 'white', cursor: 'pointer',
+                            background: 'var(--input-bg)',
+                            border: '1px dashed var(--border-color)',
+                            borderRadius: '8px', color: 'var(--app-text)', cursor: 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                             transition: 'all 0.2s'
                         }}

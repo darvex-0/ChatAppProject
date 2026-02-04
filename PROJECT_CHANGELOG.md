@@ -1,5 +1,24 @@
 # Project Changelog
 
+## Version 2.20 - Light Mode & Visual Polish 🎨
+**Date:** 4th February 2026
+
+**New Features:**
+- **Light Mode UI Polish**:
+  - **Contrast Enhancements**: Fixed invisible text issues in sidebar and chat items for light mode.
+  - **Refined Palette**: Adjusted light mode backgrounds to reduce glare and improve separation.
+  - **Themes Menu**: Renamed "Dark Mode" to "Themes" in settings to better reflect customization options.
+
+**Fixes:**
+- **Invisible Text**: Resolved hardcoded white text in `index.css` that persisted in light mode.
+
+
+
+**Technical Improvements:**
+- **CSS Variables**: Refactored entire codebase to use semantic CSS variables
+- **Modal Styling**: Unified modal styles with consistent shadows and glassmorphism support across themes
+
+
 ## Version 2.19 - Notification Settings & Status Polish 🔔
 **Date:** 3rd February 2026
 

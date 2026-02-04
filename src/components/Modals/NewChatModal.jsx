@@ -120,7 +120,7 @@ export default function NewChatModal({ onClose }) {
     return (
         <div className="modal-overlay">
             <div className="modal">
-                <h3 style={{ color: 'white', marginBottom: '1.25rem', fontSize: '1.25rem', fontWeight: 600 }}>New Chat</h3>
+                <h3 style={{ color: 'var(--app-text)', marginBottom: '1.25rem', fontSize: '1.25rem', fontWeight: 600 }}>New Chat</h3>
 
                 <input
                     autoFocus
@@ -134,8 +134,8 @@ export default function NewChatModal({ onClose }) {
                 <div className="user-results-list" style={{ minHeight: '150px', maxHeight: '300px', overflowY: 'auto', textAlign: 'left', marginBottom: '1rem' }}>
 
                     {loading && (
-                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray)' }}>
-                            <div className="spinner" style={{ width: '24px', height: '24px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 10px' }}></div>
+                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--app-text-muted)' }}>
+                            <div className="spinner" style={{ width: '24px', height: '24px', border: '3px solid var(--border-color)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 10px' }}></div>
                             Searching...
                         </div>
                     )}
@@ -147,7 +147,7 @@ export default function NewChatModal({ onClose }) {
                     )}
 
                     {!loading && !searchTerm && (
-                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray)', fontStyle: 'italic', opacity: 0.7 }}>
+                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--app-text-muted)', fontStyle: 'italic', opacity: 0.7 }}>
                             Type to find existing users
                         </div>
                     )}
@@ -165,16 +165,16 @@ export default function NewChatModal({ onClose }) {
                                 cursor: 'pointer',
                                 transition: 'all 0.2s',
                                 marginBottom: '0.5rem',
-                                background: 'rgba(255,255,255,0.03)',
-                                border: '1px solid rgba(255,255,255,0.05)'
+                                background: 'transparent',
+                                border: '1px solid var(--border-color)'
                             }}
                             onMouseEnter={e => {
-                                e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
-                                e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+                                e.currentTarget.style.background = 'var(--hover-bg, rgba(99, 102, 241, 0.1))'; // Ensure hover-bg is defined or keep fallback slightly visible
+                                e.currentTarget.style.borderColor = 'var(--primary-light)';
                             }}
                             onMouseLeave={e => {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
+                                e.currentTarget.style.background = 'transparent';
+                                e.currentTarget.style.borderColor = 'var(--border-color)';
                             }}
                         >
                             <img
@@ -182,11 +182,11 @@ export default function NewChatModal({ onClose }) {
                                 style={{ width: '42px', height: '42px', borderRadius: '50%', marginRight: '1rem', objectFit: 'cover' }}
                             />
                             <div>
-                                <div style={{ color: 'white', fontWeight: 600, fontSize: '0.95rem' }}>{user.name}</div>
+                                <div style={{ color: 'var(--app-text)', fontWeight: 600, fontSize: '0.95rem' }}>{user.name}</div>
                                 <div style={{ color: 'var(--gray)', fontSize: '0.8rem' }}>{user.email}</div>
                             </div>
                             <div style={{ marginLeft: 'auto', opacity: 0.5 }}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                             </div>
                         </div>
                     ))}
