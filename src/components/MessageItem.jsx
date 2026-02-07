@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import EmojiPicker from 'emoji-picker-react';
 
@@ -83,7 +83,7 @@ function AudioPlayer({ src }) {
     );
 }
 
-export default function MessageItem({ msg, currentUser, chatInfo, initiateReply, initiateForward, addReaction, confirmDelete, initiateEdit, pinMessage, starMessage, highlightText }) {
+function MessageItem({ msg, currentUser, chatInfo, initiateReply, initiateForward, addReaction, confirmDelete, initiateEdit, pinMessage, starMessage, highlightText }) {
     const isMe = msg.sender === currentUser.uid;
     const [showOriginalSender, setShowOriginalSender] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -418,11 +418,33 @@ export default function MessageItem({ msg, currentUser, chatInfo, initiateReply,
                 </span>
                 {isMe && (
                     msg.status === 'seen' ?
-                        <svg className="receipt-ticks receipt-seen" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline><path d="M16 11.08V12a6 6 0 1 1-3.53-5.65"></path><polyline points="16 4 10 10.01 8 8.01"></polyline></svg>
+                        <div title="Read">
+                            <svg className="receipt-ticks receipt-seen" xmlns="http://www.w3.org/2000/svg" width="16" height="15" viewBox="0 0 16 15" fill="none">
+                                <path d="M15.01 3.316L8.408 11.75L5.593 8.883" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M11.3 3.316L4.696 11.75L1.883 8.883" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </div>
                         :
-                        <svg className="receipt-ticks receipt-sent" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        <div title="Sent">
+                            <svg className="receipt-ticks receipt-sent" xmlns="http://www.w3.org/2000/svg" width="16" height="15" viewBox="0 0 16 15" fill="none">
+                                <path d="M11.3 3.316L4.696 11.75L1.883 8.883" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </div>
                 )}
             </div>
         </div>
     );
 }
+
+export default React.memo(MessageItem, (prevProps, nextProps) => {
+    return (
+        prevProps.msg.id === nextProps.msg.id &&
+        prevProps.msg.status === nextProps.msg.status &&
+        prevProps.msg.text === nextProps.msg.text &&
+        prevProps.msg.edited === nextProps.msg.edited &&
+        JSON.stringify(prevProps.msg.reactions) === JSON.stringify(nextProps.msg.reactions) &&
+        prevProps.msg.isPinned === nextProps.msg.isPinned &&
+        prevProps.msg.isStarred === nextProps.msg.isStarred &&
+        prevProps.highlightText === nextProps.highlightText
+    );
+});

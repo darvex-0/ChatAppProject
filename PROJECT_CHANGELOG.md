@@ -20,6 +20,8 @@
 **Fixes:**
 - **Invisible Text**: Resolved hardcoded white text in `index.css` that persisted in light mode.
 - **Scheduled Messages Modal**: Moved the close button to the top-right corner using proper spacing for better usability.
+- **Read Receipts**: Verified "WhatsApp-style" ticks (✓ for sent, ✓✓ for read).
+  - **Theming**: Ticks are **White** in both Light and Dark modes (optimized for contrast).
 
 
 

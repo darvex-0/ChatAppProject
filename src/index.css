@@ -42,7 +42,11 @@
     --success: #10b981;
     --success: #10b981;
     --danger: #ef4444;
+    --danger: #ef4444;
     --warning: #fbbf24;
+
+    /* Read Receipt Colors */
+    --tick-color: #ffffff;
   }
 
   [data-theme="light"] {
@@ -87,6 +91,8 @@
     /* Darker red for contrast */
     --warning: #d97706;
     /* Darker amber for contrast */
+
+    --tick-color: #ffffff;
   }
 
   * {
@@ -426,6 +432,19 @@
       opacity: 1;
       transform: translateY(0);
     }
+  }
+
+  .receipt-ticks {
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  .receipt-seen {
+    color: var(--tick-color);
+  }
+
+  .receipt-sent {
+    color: rgba(255, 255, 255, 0.6);
   }
 
   .message.self {

@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, storage } from '../services/firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, setDoc, deleteDoc, deleteField, increment, limitToLast, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, setDoc, deleteDoc, deleteField, increment, limitToLast, Timestamp, writeBatch } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
@@ -434,26 +434,24 @@ export default function ChatWindow() {
                 msg => msg.sender !== currentUser.uid && msg.status !== 'seen'
             );
 
-            // Batch update all unread messages
-            for (const msg of unreadMessages) {
-                try {
-                    await updateDoc(doc(db, "chats", chatId, "messages", msg.id), {
-                        status: 'seen'
-                    });
-                } catch (e) {
-                    console.error("Error marking message as seen:", e);
-                }
-            }
+            if (unreadMessages.length === 0) return;
 
-            // Fix: Also reset the unread count in the chat document if we found unread messages
-            if (unreadMessages.length > 0) {
-                try {
-                    await updateDoc(doc(db, "chats", chatId), {
-                        [`unreadCounts.${currentUser.uid}`]: 0
-                    });
-                } catch (e) {
-                    console.error("Error resetting unread count:", e);
-                }
+            // Batch update implementation for speed and atomicity
+            const batch = writeBatch(db);
+
+            unreadMessages.forEach(msg => {
+                const msgRef = doc(db, "chats", chatId, "messages", msg.id);
+                batch.update(msgRef, { status: 'seen' });
+            });
+
+            // Also reset unread count
+            const chatRef = doc(db, "chats", chatId);
+            batch.update(chatRef, { [`unreadCounts.${currentUser.uid}`]: 0 });
+
+            try {
+                await batch.commit();
+            } catch (e) {
+                console.error("Error batch marking seen:", e);
             }
         };
 
