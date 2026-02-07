@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
@@ -76,8 +76,11 @@ export default function Sidebar() {
             // Check if unread count increased
             const prevCount = prevUnreadCountsRef.current[chat.id] || 0;
             if (count > prevCount) {
-                hasNewUnread = true;
-                lastNewMessage = chat;
+                // Only trigger notification if NOT archived
+                if (!chat.isArchived) {
+                    hasNewUnread = true;
+                    lastNewMessage = chat;
+                }
             }
         });
 
@@ -147,6 +150,9 @@ export default function Sidebar() {
         setDeferredPrompt(null);
     };
 
+    // Archive / Unarchive Logic
+    const [showArchived, setShowArchived] = useState(false);
+
     useEffect(() => {
         if (!currentUser) return;
 
@@ -163,10 +169,8 @@ export default function Sidebar() {
                 let chatPic = "";
                 let friendId = null;
 
-                // Archive Check
-                if (data.archivedBy && data.archivedBy.includes(currentUser.uid)) {
-                    return null;
-                }
+                // Archive Status Check (Don't filter here, just tag)
+                const isArchived = data.archivedBy && data.archivedBy.includes(currentUser.uid);
 
                 if (data.type === 'group') {
                     chatName = data.groupName;
@@ -204,12 +208,59 @@ export default function Sidebar() {
                     ...data,
                     displayName: chatName,
                     displayPic: chatPic,
-                    friendId // Pass friendId for the indicator
+                    friendId,
+                    isArchived // Pass archive status
                 };
             });
 
-            const resolvedChats = (await Promise.all(chatsProms)).filter(c => c !== null);
-            setChats(resolvedChats);
+            const resolvedChatsList = (await Promise.all(chatsProms)).filter(c => c !== null);
+
+            // Smart Deduplication Logic
+            const chatsByFriend = new Map();
+            const groupChats = [];
+
+            resolvedChatsList.forEach(chat => {
+                if (chat.type === 'group') {
+                    groupChats.push(chat);
+                } else if (chat.friendId) {
+                    if (!chatsByFriend.has(chat.friendId)) {
+                        chatsByFriend.set(chat.friendId, chat);
+                    } else {
+                        const existing = chatsByFriend.get(chat.friendId);
+
+                        // Check for actual content (not "Started a new chat")
+                        const hasContent = (c) => c.lastMessage && c.lastMessage !== "Started a new chat";
+                        const currentHasContent = hasContent(chat);
+                        const existingHasContent = hasContent(existing);
+
+                        if (currentHasContent && !existingHasContent) {
+                            // Current has content, existing doesn't -> Replace
+                            chatsByFriend.set(chat.friendId, chat);
+                        } else if (currentHasContent === existingHasContent) {
+                            // Both have content OR both are empty -> Keep newer
+                            const timeCurrent = chat.lastUpdate?.seconds || 0;
+                            const timeExisting = existing.lastUpdate?.seconds || 0;
+                            if (timeCurrent > timeExisting) {
+                                chatsByFriend.set(chat.friendId, chat);
+                            }
+                        }
+                        // Else: Existing has content, current doesn't -> Keep existing (do nothing)
+                    }
+                } else {
+                    // Fallback for self/unknown
+                    groupChats.push(chat);
+                }
+            });
+
+            // Combine and sort by time
+            const uniqueChats = [...groupChats, ...chatsByFriend.values()].sort((a, b) => {
+                // Fix for jumping: If lastUpdate is null (pending write), treat as NOW
+                const timeA = a.lastUpdate ? a.lastUpdate.seconds : Date.now() / 1000;
+                const timeB = b.lastUpdate ? b.lastUpdate.seconds : Date.now() / 1000;
+                return timeB - timeA;
+            });
+
+            setChats(uniqueChats);
         });
 
         return () => unsubscribe();
@@ -226,25 +277,82 @@ export default function Sidebar() {
         }
     };
 
-    const filteredChats = chats.filter(chat =>
-        chat.displayName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const unarchiveChat = async (e, chatId) => {
+        e.stopPropagation();
+        try {
+            await updateDoc(doc(db, "chats", chatId), {
+                archivedBy: arrayRemove(currentUser.uid)
+            });
+        } catch (e) {
+            console.error("Error unarchiving", e);
+        }
+    };
+
+    const filteredChats = chats.filter(chat => {
+        const matchesSearch = chat.displayName.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesArchiveStatus = showArchived ? chat.isArchived : !chat.isArchived;
+        return matchesSearch && matchesArchiveStatus;
+    });
 
     return (
         <div id="inbox">
             <div className="inbox-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
                     <h2 className="inbox-title">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                        Your Conversations
+                        {showArchived ? (
+                            <>
+                                <span
+                                    onClick={() => setShowArchived(false)}
+                                    style={{ cursor: 'pointer', marginRight: '0.5rem', display: 'inline-flex', alignItems: 'center' }}
+                                    title="Back to Inbox"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                                </span>
+                                Archived Chats
+                            </>
+                        ) : (
+                            <>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                Your Conversations
+                            </>
+                        )}
                     </h2>
+
+                    {!showArchived && (
+                        <button
+                            onClick={() => setShowArchived(true)}
+                            style={{ background: 'transparent', border: 'none', color: 'var(--app-text-muted)', cursor: 'pointer', padding: '0.2rem', position: 'relative' }}
+                            title="View Archived Chats"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
+                            {chats.filter(c => c.isArchived).reduce((acc, c) => acc + (c.unreadCounts?.[currentUser.uid] || 0), 0) > 0 && (
+                                <span style={{
+                                    position: 'absolute',
+                                    top: '-5px',
+                                    right: '-5px',
+                                    background: 'var(--danger)',
+                                    color: 'white',
+                                    fontSize: '0.6rem',
+                                    width: '16px',
+                                    height: '16px',
+                                    borderRadius: '50%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontWeight: 'bold'
+                                }}>
+                                    {chats.filter(c => c.isArchived).reduce((acc, c) => acc + (c.unreadCounts?.[currentUser.uid] || 0), 0)}
+                                </span>
+                            )}
+                        </button>
+                    )}
                 </div>
 
                 <div style={{ width: '100%', marginBottom: '1rem', marginTop: '0.5rem' }}>
                     <input
                         className="search-input-legacy"
                         type="text"
-                        placeholder="Filter your inbox..."
+                        placeholder={showArchived ? "Search archived chats..." : "Filter your inbox..."}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         style={{
@@ -263,8 +371,8 @@ export default function Sidebar() {
                     />
                 </div>
 
-                {/* PWA Install Button */}
-                {showInstallButton && (
+                {/* PWA Install Button & Other Alerts (Hide in Archive View usually, but keeping for now) */}
+                {!showArchived && showInstallButton && (
                     <div
                         onClick={handleInstallClick}
                         style={{
@@ -297,7 +405,7 @@ export default function Sidebar() {
                     </div>
                 )}
 
-                {notificationPermission === 'default' && (
+                {!showArchived && notificationPermission === 'default' && (
                     <div
                         onClick={() => requestNotificationPermission()}
                         style={{
@@ -323,8 +431,10 @@ export default function Sidebar() {
             <div id="chatList">
                 {filteredChats.length === 0 && (
                     <div className="empty-state" style={{ display: 'block' }}>
-                        <div style={{ fontSize: '3rem' }}>💭</div>
-                        <p>No conversations found</p>
+                        <div style={{ fontSize: '3rem' }}>
+                            {showArchived ? '🗃️' : '💭'}
+                        </div>
+                        <p>{showArchived ? "No archived chats" : "No conversations found"}</p>
                         {searchQuery && <p style={{ fontSize: '0.8rem' }}>Try a different search</p>}
                     </div>
                 )}
@@ -380,9 +490,15 @@ export default function Sidebar() {
                             </small>
                         </div>
 
-                        <div className="archive-btn" onClick={(e) => archiveChat(e, chat.id)} title="Archive Chat">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8v13H3V8" /><rect x="1" y="3" width="22" height="5" /><line x1="10" y1="12" x2="14" y2="12" /></svg>
-                        </div>
+                        {showArchived ? (
+                            <div className="archive-btn" onClick={(e) => unarchiveChat(e, chat.id)} title="Unarchive Chat" style={{ color: 'var(--primary)' }}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            </div>
+                        ) : (
+                            <div className="archive-btn" onClick={(e) => archiveChat(e, chat.id)} title="Archive Chat">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8v13H3V8" /><rect x="1" y="3" width="22" height="5" /><line x1="10" y1="12" x2="14" y2="12" /></svg>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>

@@ -1,5 +1,23 @@
 # Project Changelog
 
+## Version 2.21 - Archive & Polish 🗂️
+**Date:** 7th February 2026
+
+**New Features:**
+- **Archived Chats**: Keep your sidebar clutter-free!
+  - **Archive/Unarchive**: Swipe or use the menu to archive chats.
+  - **Archived Folder**: Access all archived chats via the folder icon in the sidebar header.
+  - **Muted Notifications**: Archived chats are validly muted (no sound/popups), but still show unread badges.
+  - **Smart Unarchive**: Starting a new chat with an archived user automatically restores the conversation.
+
+**Improvements & Fixes:**
+- **Instant Timestamps ⚡**: Messages now show the current time immediately upon sending (Optimistic UI), eliminating the "..." delay.
+- **Stable Sidebar Sorting**: Fixed an issue where chats would jump to the bottom of the list momentarily when sending a new message.
+- **Smart Deduplication**: Logic to automatically merge and clean up duplicate chat entries in the sidebar.
+- **Notification Logic**: Enhanced rules to ensure notifications only play for active, unmuted chats.
+
+---
+
 ## Version 2.20 - Light Mode & Visual Polish 🎨
 **Date:** 4th February 2026
 

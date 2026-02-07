@@ -351,7 +351,15 @@ export default function ChatWindow() {
             limitToLast(messageLimit)
         );
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setMessages(snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    // Fix for "..." timestamp on immediate send: use current time if serverTimestamp is pending
+                    timestamp: data.timestamp || Timestamp.now()
+                };
+            }));
         });
         return () => unsubscribe();
     }, [chatId, messageLimit]);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/firebase';
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, doc, arrayRemove } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -71,33 +71,84 @@ export default function NewChatModal({ onClose }) {
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm, currentUser]);
 
+    const [isStartingChat, setIsStartingChat] = useState(false);
+
     const startChat = async (userId) => {
+        if (isStartingChat) return;
+        setIsStartingChat(true);
+
         try {
             // Check for existing private chat between these two users
-            // Note: 'array-contains' only matches one value. 'in' matches one of many.
-            // Firestore doesn't support 'contains-all' natively in a single query easily without composite keys.
-            // WORKAROUND: Query for chats containing currentUser, then filter in memory (efficient enough for small-medium apps)
-
+            // Query by member only, filter type in memory to avoid complex index requirements/failures
             const q = query(
                 collection(db, "chats"),
-                where("members", "array-contains", currentUser.uid),
-                where("type", "==", "private")
+                where("members", "array-contains", currentUser.uid)
             );
 
             const snapshot = await getDocs(q);
             let existingChatId = null;
 
-            snapshot.forEach(doc => {
+            // Iterate to find a private chat with this specific user
+            snapshot.docs.forEach(doc => {
                 const data = doc.data();
-                if (data.members.includes(userId)) {
+                const isPrivate = data.type === 'private' || !data.type;
+                if (isPrivate && data.members.includes(userId)) {
                     existingChatId = doc.id;
                 }
             });
 
             if (existingChatId) {
+                // Handle potential duplicates: Find ALL chats with this user
+                // RELAXED CHECK: allow type === 'private' OR missing type (legacy compatibility)
+                const allChatsWithUser = snapshot.docs.filter(doc => {
+                    const data = doc.data();
+                    const isPrivate = data.type === 'private' || !data.type;
+                    return isPrivate && data.members.includes(userId);
+                });
+
+                // 1. Unarchive ALL of them to ensure visibility regardless of which one Sidebar picks
+                const unarchivePromises = allChatsWithUser.map(async (docSnapshot) => {
+                    try {
+                        const data = docSnapshot.data();
+                        if (data.archivedBy && data.archivedBy.includes(currentUser.uid)) {
+                            console.log("Unarchiving chat:", docSnapshot.id);
+                            await updateDoc(doc(db, "chats", docSnapshot.id), {
+                                archivedBy: arrayRemove(currentUser.uid)
+                            });
+                            return true; // Was archived
+                        }
+                    } catch (err) {
+                        console.error("Failed to unarchive chat:", docSnapshot.id, err);
+                    }
+                    return false;
+                });
+
+                const results = await Promise.all(unarchivePromises);
+                if (results.some(r => r === true)) {
+                    console.log("Automatically unarchived chats.");
+                }
+
+                // 2. Determine "Best" chat to navigate to (prioritize content)
+                let bestChatId = existingChatId;
+                const bestChat = allChatsWithUser.sort((a, b) => {
+                    const dataA = a.data();
+                    const dataB = b.data();
+                    const hasContentA = dataA.lastMessage && dataA.lastMessage !== "Started a new chat";
+                    const hasContentB = dataB.lastMessage && dataB.lastMessage !== "Started a new chat";
+
+                    if (hasContentA && !hasContentB) return -1; // A comes first
+                    if (!hasContentA && hasContentB) return 1; // B comes first
+                    return b.data().lastUpdate?.seconds - a.data().lastUpdate?.seconds; // Newer first
+                })[0];
+
+                if (bestChat) {
+                    bestChatId = bestChat.id;
+                }
+
                 // Chat exists, navigate to it
                 onClose();
-                navigate(`/c/${existingChatId}`);
+                navigate(`/c/${bestChatId}`);
+                setIsStartingChat(false);
                 return;
             }
 
@@ -113,7 +164,10 @@ export default function NewChatModal({ onClose }) {
             onClose();
             navigate(`/c/${chatRef.id}`);
         } catch (e) {
+            console.error("Error starting chat:", e);
             alert("Error starting chat: " + e.message);
+        } finally {
+            setIsStartingChat(false);
         }
     };
 
