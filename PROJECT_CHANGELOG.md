@@ -1,5 +1,44 @@
 # Project Changelog
 
+## Version 2.22 - PWA Video/Audio Calling 📹🔊
+**Date:** 9th February 2026
+
+**New Features:**
+- **1-on-1 Video & Audio Calling**: Full WebRTC peer-to-peer calling system
+  - **Video Calls**: Real-time video with local PiP preview
+  - **Audio Calls**: Voice-only calls with avatar display
+  - **Call Controls**: Mute, camera toggle, end call buttons
+  - **Incoming Call UI**: Caller info, ringtone, Accept/Decline buttons
+  - **Outgoing Call UI**: Animated calling state with cancel option
+
+- **PWA Superpowers**:
+  - **Wake Lock**: Screen stays awake during active calls
+  - **Picture-in-Picture**: Continue video while using other apps (PiP button)
+  - **Tab Visibility Warning**: Warns browser users when backgrounding tab
+  - **Service Worker Notifications**: System-level incoming call notifications
+    - Answer/Decline buttons on notification
+    - Vibration pattern for phone alerts
+    - Auto-closes when call ends
+
+- **WebRTC Features**:
+  - **STUN Servers**: Google's public STUN for NAT traversal
+  - **Ghost Ring Fix**: Auto-cleanup on tab close/reload
+  - **Collision-Safe IDs**: Alphabetically sorted call IDs prevent duplicates
+
+**Technical Details:**
+- `CallContext.jsx`: WebRTC logic, Wake Lock, SW messaging
+- `CallModal.jsx`: UI, PiP toggle, visibility warning
+- `firebase-messaging-sw.js`: Call notification handlers
+- `firestore.rules`: Calls collection with proper permissions
+
+**Bug Fixes:**
+- Fixed permission error when checking for existing calls
+- Fixed Wake Lock error when page not visible
+- Fixed PiP error when video metadata not loaded
+- Fixed video not displaying (stream attachment timing)
+
+---
+
 ## Version 2.21 - Archive & Polish 🗂️
 **Date:** 7th February 2026
 

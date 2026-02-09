@@ -1,6 +1,7 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
+import { CallProvider } from '../context/CallContext';
 import { useEffect, useState } from 'react';
 import SettingsModal from './Modals/SettingsModal';
 import NewChatModal from './Modals/NewChatModal';
@@ -8,6 +9,8 @@ import GroupModal from './Modals/GroupModal';
 import NotificationToast from './NotificationToast';
 import CustomAlert from './CustomAlert';
 import StarredMessagesModal from './Modals/StarredMessagesModal';
+import CallModal from './Modals/CallModal';
+
 
 export default function Layout() {
     const { currentUser } = useAuth();
@@ -32,7 +35,7 @@ export default function Layout() {
     if (!currentUser) return null;
 
     return (
-        <>
+        <CallProvider>
             {/* Header - Only show on Inbox view */}
             {!isChatOpen && (
                 <header>
@@ -81,7 +84,7 @@ export default function Layout() {
                 <Outlet />
             </div>
 
-            {/* Modals & ALerts */}
+            {/* Modals & Alerts */}
             {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
             {showNewChat && <NewChatModal onClose={() => setShowNewChat(false)} />}
             {showGroupModal && <GroupModal onClose={() => setShowGroupModal(false)} />}
@@ -89,6 +92,9 @@ export default function Layout() {
 
             {alert && <CustomAlert message={alert.message} onClose={closeAlert} />}
             {toast && <NotificationToast message={toast.message} data={toast.data} onClose={closeToast} />}
-        </>
+
+            {/* Call Modal - Always rendered, shows based on call state */}
+            <CallModal />
+        </CallProvider>
     );
 }

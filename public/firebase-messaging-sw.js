@@ -100,3 +100,58 @@ self.addEventListener('fetch', (event) => {
             })
     );
 });
+
+// ============================================
+// PWA VIDEO CALLING - NOTIFICATION HANDLERS
+// ============================================
+
+// Handle incoming call notifications from client
+self.addEventListener('message', (event) => {
+    if (event.data?.type === 'INCOMING_CALL') {
+        self.registration.showNotification('Incoming Call', {
+            body: `${event.data.callerName} is calling...`,
+            icon: '/icon-192.png',
+            tag: 'incoming-call',
+            requireInteraction: true,
+            vibrate: [200, 100, 200, 100, 200], // Vibration pattern
+            actions: [
+                { action: 'answer', title: '📞 Answer' },
+                { action: 'decline', title: '❌ Decline' }
+            ]
+        });
+    } else if (event.data?.type === 'CLOSE_CALL_NOTIFICATION') {
+        // Close notification when call ends/is answered
+        self.registration.getNotifications({ tag: 'incoming-call' }).then(notifications => {
+            notifications.forEach(n => n.close());
+        });
+    }
+});
+
+// Handle notification button clicks
+self.addEventListener('notificationclick', (event) => {
+    const notification = event.notification;
+    const action = event.action;
+    notification.close();
+
+    if (notification.tag === 'incoming-call') {
+        if (action === 'decline') {
+            // Notify client to decline call without opening window
+            clients.matchAll({ type: 'window' }).then(cls => {
+                cls.forEach(client => client.postMessage({ type: 'DECLINE_CALL' }));
+            });
+        } else {
+            // Answer or default click -> focus/open window
+            event.waitUntil(
+                clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+                    if (clientList.length > 0) {
+                        // Find focused window or focus the first one
+                        const focusedClient = clientList.find(c => c.focused);
+                        if (focusedClient) return focusedClient;
+                        return clientList[0].focus();
+                    }
+                    return clients.openWindow('/');
+                })
+            );
+        }
+    }
+});

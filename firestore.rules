@@ -52,5 +52,31 @@ service cloud.firestore {
           request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members;
       }
     }
+
+    // 5. CALLS COLLECTION (Video/Audio Calling)
+    match /calls/{callId} {
+      // Allow read (get + list) for authenticated users
+      // - get: needed to check if call exists before creating
+      // - list: needed for incoming call queries
+      allow read: if request.auth != null;
+      
+      // Allow create if user is the caller
+      allow create: if request.auth != null && 
+        request.resource.data.callerId == request.auth.uid;
+      
+      // Allow update if user is caller or receiver
+      allow update: if request.auth != null && 
+        (resource.data.callerId == request.auth.uid || resource.data.receiverId == request.auth.uid);
+      
+      // Allow delete if user is caller or receiver
+      allow delete: if request.auth != null && 
+        (resource.data.callerId == request.auth.uid || resource.data.receiverId == request.auth.uid);
+
+      // ICE Candidates subcollection
+      match /iceCandidates/{candidateId} {
+        // Allow all operations for authenticated users in a call
+        allow read, write: if request.auth != null;
+      }
+    }
   }
 }

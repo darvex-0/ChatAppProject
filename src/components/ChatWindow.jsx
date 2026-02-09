@@ -6,6 +6,7 @@ import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, u
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
+import { useCall } from '../context/CallContext';
 import ChatInfoModal from './Modals/ChatInfoModal';
 import WallpaperModal from './Modals/WallpaperModal';
 import ForwardModal from './Modals/ForwardModal';
@@ -19,6 +20,7 @@ export default function ChatWindow() {
     const { chatId } = useParams();
     const { currentUser } = useAuth();
     const { showAlert } = useUI();
+    const { callUser } = useCall();
     const navigate = useNavigate();
     const [messages, setMessages] = useState([]);
     const [inputText, setInputText] = useState("");
@@ -90,6 +92,18 @@ export default function ChatWindow() {
     const typingTimeoutRef = useRef(null);
     const inputRef = useRef(null);
     const fileInputRef = useRef(null);
+
+    // Handle starting a call
+    const handleStartCall = async (type) => {
+        if (!chatInfo?.uid) {
+            showAlert("Cannot start call: User not found");
+            return;
+        }
+        const result = await callUser(chatInfo.uid, type);
+        if (!result.success) {
+            showAlert(result.error || "Failed to start call");
+        }
+    };
 
     // Network Status Listener
     useEffect(() => {
@@ -1342,6 +1356,28 @@ export default function ChatWindow() {
                         <span style={{ color: 'var(--app-text)', fontWeight: 500 }}>{chatInfo?.name || "Chat"}</span>
                     </div>
                 </div>
+
+                {/* Call Buttons - Only show for 1-on-1 chats */}
+                {chatInfo?.type !== 'group' && chatInfo?.uid && (
+                    <div style={{ display: 'flex', gap: '0.5rem', marginRight: '0.5rem' }}>
+                        <button
+                            onClick={() => handleStartCall('audio')}
+                            className="icon-btn"
+                            title="Voice Call"
+                            style={{ width: '36px', height: '36px', border: 'none', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                        </button>
+                        <button
+                            onClick={() => handleStartCall('video')}
+                            className="icon-btn"
+                            title="Video Call"
+                            style={{ width: '36px', height: '36px', border: 'none', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                        </button>
+                    </div>
+                )}
 
                 {/* 3-Dot Menu */}
                 <div className="header-menu-container" style={{ position: 'relative' }}>
