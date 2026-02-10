@@ -18,13 +18,36 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage(function (payload) {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
-    const notificationTitle = payload.notification.title;
-    const notificationOptions = {
-        body: payload.notification.body,
-        icon: '/icon-192.png'
-    };
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    // Check if this is an incoming call data message (from onCallCreated Cloud Function)
+    if (payload.data && payload.data.type === 'INCOMING_CALL') {
+        const callerName = payload.data.callerName || 'Someone';
+        const callType = payload.data.callType || 'audio';
+        const icon = callType === 'video' ? '📹' : '📞';
+
+        return self.registration.showNotification(`${icon} Incoming ${callType} call`, {
+            body: `${callerName} is calling...`,
+            icon: '/icon-192.png',
+            tag: 'incoming-call',
+            requireInteraction: true,
+            vibrate: [200, 100, 200, 100, 200, 100, 200],
+            data: payload.data, // Pass call data for click handling
+            actions: [
+                { action: 'answer', title: '📞 Answer' },
+                { action: 'decline', title: '❌ Decline' }
+            ]
+        });
+    }
+
+    // Regular chat notification (has notification key)
+    if (payload.notification) {
+        const notificationTitle = payload.notification.title;
+        const notificationOptions = {
+            body: payload.notification.body,
+            icon: '/icon-192.png'
+        };
+        self.registration.showNotification(notificationTitle, notificationOptions);
+    }
 });
 
 // PWA Offline Caching

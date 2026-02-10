@@ -322,7 +322,102 @@ exports.sendPushNotification = functions.firestore.onDocumentCreated("chats/{cha
   }
 });
 
-// --- Function 5: checkScheduledMessages (Cron Job) ---
+// --- Function 5: onCallCreated (Background Wake-Up for Calls) ---
+// Sends FCM data message to receiver when a call is initiated
+// This wakes up the Service Worker even if the app is force-closed
+exports.onCallCreated = functions.firestore.onDocumentCreated("calls/{callId}", async (event) => {
+  const callData = event.data.data();
+  const callId = event.params.callId;
+
+  if (!callData || callData.status !== 'offering') {
+    return;
+  }
+
+  const receiverId = callData.receiverId;
+  const callerName = callData.callerName || 'Someone';
+  const callerPhoto = callData.callerPhoto || '';
+  const callType = callData.type || 'audio';
+
+  logger.info(`Call created: ${callerName} -> ${receiverId} (${callType})`);
+
+  // Get receiver's FCM tokens
+  try {
+    const receiverDoc = await admin.firestore().collection("users").doc(receiverId).get();
+    if (!receiverDoc.exists) {
+      logger.warn(`Receiver ${receiverId} not found`);
+      return;
+    }
+
+    const receiverData = receiverDoc.data();
+    const tokens = receiverData.fcmTokens || [];
+
+    if (tokens.length === 0) {
+      logger.info("No FCM tokens for receiver");
+      return;
+    }
+
+    // Get access token for FCM v1 API
+    const projectId = process.env.GCLOUD_PROJECT;
+    if (!projectId) {
+      logger.error("GCLOUD_PROJECT env var not set.");
+      return;
+    }
+
+    const tokenObj = await admin.credential.applicationDefault().getAccessToken();
+    const accessToken = tokenObj.access_token;
+    const FCM_V1_ENDPOINT = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
+
+    // Send DATA-ONLY message (no 'notification' key!)
+    // This ensures the Service Worker's onBackgroundMessage always fires
+    const sendPromises = tokens.map(token => {
+      const payload = {
+        message: {
+          token: token,
+          data: {
+            type: 'INCOMING_CALL',
+            callId: callId,
+            callerName: callerName,
+            callerPhoto: callerPhoto,
+            callType: callType
+          },
+          // Android: high priority to wake device
+          android: {
+            priority: 'high',
+            ttl: '30s'
+          },
+          // Web: high urgency
+          webpush: {
+            headers: {
+              Urgency: 'high',
+              TTL: '30'
+            }
+          }
+        }
+      };
+
+      return fetch(FCM_V1_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+    });
+
+    const responses = await Promise.all(sendPromises);
+    let successCount = 0;
+    for (const res of responses) {
+      if (res.ok) successCount++;
+    }
+    logger.info(`Call FCM sent: ${successCount}/${tokens.length} successful`);
+
+  } catch (error) {
+    logger.error("Error sending call FCM:", error);
+  }
+});
+
+// --- Function 6: checkScheduledMessages (Cron Job) ---
 // Checks for pending scheduled messages every minute
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 
