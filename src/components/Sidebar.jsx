@@ -4,6 +4,8 @@ import { collection, query, where, orderBy, onSnapshot, doc, getDoc, updateDoc, 
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
+import { useCall } from '../context/CallContext';
+import CallLogItem from './CallLogItem';
 
 // Helper Component for Real-Time Online Status AND Profile Data
 function OnlineIndicator({ userId, onProfileUpdate }) {
@@ -35,8 +37,10 @@ function OnlineIndicator({ userId, onProfileUpdate }) {
 export default function Sidebar() {
     const { currentUser } = useAuth();
     const { searchQuery, setSearchQuery, notificationPermission, requestNotificationPermission, notificationSettings } = useUI();
+    const { callHistory, callUser } = useCall();
     const [chats, setChats] = useState([]);
     const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState('chats'); // 'chats' | 'calls'
     const userCache = useRef({});
 
     // PWA Install Prompt State
@@ -294,6 +298,14 @@ export default function Sidebar() {
         return matchesSearch && matchesArchiveStatus;
     });
 
+    // Filter call history by search
+    const filteredCallHistory = callHistory.filter(log => {
+        if (!searchQuery) return true;
+        const isCaller = log.callerId === currentUser.uid;
+        const name = isCaller ? log.receiverName : log.callerName;
+        return name?.toLowerCase().includes(searchQuery.toLowerCase());
+    });
+
     return (
         <div id="inbox">
             <div className="inbox-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
@@ -310,6 +322,11 @@ export default function Sidebar() {
                                 </span>
                                 Archived Chats
                             </>
+                        ) : activeTab === 'calls' ? (
+                            <>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                Call History
+                            </>
                         ) : (
                             <>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
@@ -318,7 +335,7 @@ export default function Sidebar() {
                         )}
                     </h2>
 
-                    {!showArchived && (
+                    {!showArchived && activeTab === 'chats' && (
                         <button
                             onClick={() => setShowArchived(true)}
                             style={{ background: 'transparent', border: 'none', color: 'var(--app-text-muted)', cursor: 'pointer', padding: '0.2rem', position: 'relative' }}
@@ -348,11 +365,31 @@ export default function Sidebar() {
                     )}
                 </div>
 
-                <div style={{ width: '100%', marginBottom: '1rem', marginTop: '0.5rem' }}>
+                {/* Tab Switcher */}
+                {!showArchived && (
+                    <div className="sidebar-tabs">
+                        <button
+                            className={`sidebar-tab ${activeTab === 'chats' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('chats')}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                            Chats
+                        </button>
+                        <button
+                            className={`sidebar-tab ${activeTab === 'calls' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('calls')}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                            Calls
+                        </button>
+                    </div>
+                )}
+
+                <div style={{ width: '100%', marginBottom: '0.5rem' }}>
                     <input
                         className="search-input-legacy"
                         type="text"
-                        placeholder={showArchived ? "Search archived chats..." : "Filter your inbox..."}
+                        placeholder={showArchived ? "Search archived chats..." : activeTab === 'calls' ? "Search call history..." : "Filter your inbox..."}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         style={{
@@ -371,8 +408,8 @@ export default function Sidebar() {
                     />
                 </div>
 
-                {/* PWA Install Button & Other Alerts (Hide in Archive View usually, but keeping for now) */}
-                {!showArchived && showInstallButton && (
+                {/* PWA Install Button & Other Alerts */}
+                {!showArchived && activeTab === 'chats' && showInstallButton && (
                     <div
                         onClick={handleInstallClick}
                         style={{
@@ -405,7 +442,7 @@ export default function Sidebar() {
                     </div>
                 )}
 
-                {!showArchived && notificationPermission === 'default' && (
+                {!showArchived && activeTab === 'chats' && notificationPermission === 'default' && (
                     <div
                         onClick={() => requestNotificationPermission()}
                         style={{
@@ -429,78 +466,96 @@ export default function Sidebar() {
             </div>
 
             <div id="chatList">
-                {filteredChats.length === 0 && (
-                    <div className="empty-state" style={{ display: 'block' }}>
-                        <div style={{ fontSize: '3rem' }}>
-                            {showArchived ? '🗃️' : '💭'}
-                        </div>
-                        <p>{showArchived ? "No archived chats" : "No conversations found"}</p>
-                        {searchQuery && <p style={{ fontSize: '0.8rem' }}>Try a different search</p>}
-                    </div>
-                )}
-                {filteredChats.map(chat => (
-                    <div
-                        key={chat.id}
-                        onClick={() => navigate(`/c/${chat.id}`)}
-                        className="chat-item"
-                    >
-                        {chat.displayPic ? (
-                            <img src={chat.displayPic} alt="" className="profile-pic" />
+                {/* CALLS TAB */}
+                {activeTab === 'calls' && !showArchived ? (
+                    <>
+                        {filteredCallHistory.length === 0 ? (
+                            <div className="empty-state" style={{ display: 'block' }}>
+                                <div style={{ fontSize: '3rem' }}>📞</div>
+                                <p>{searchQuery ? 'No calls match your search' : 'No call history yet'}</p>
+                                <p style={{ fontSize: '0.8rem', color: 'var(--app-text-muted)' }}>Your calls will appear here</p>
+                            </div>
                         ) : (
-                            <div className="profile-pic" style={{ background: 'var(--input-bg)', color: 'var(--app-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' }}>
-                                {chat.type === 'group' ? '👥' : '👤'}
+                            filteredCallHistory.map(log => (
+                                <CallLogItem key={log.id} log={log} />
+                            ))
+                        )}
+                    </>
+                ) : (
+                    /* CHATS TAB */
+                    <>
+                        {filteredChats.length === 0 && (
+                            <div className="empty-state" style={{ display: 'block' }}>
+                                <div style={{ fontSize: '3rem' }}>
+                                    {showArchived ? '🗃️' : '💭'}
+                                </div>
+                                <p>{showArchived ? "No archived chats" : "No conversations found"}</p>
+                                {searchQuery && <p style={{ fontSize: '0.8rem' }}>Try a different search</p>}
                             </div>
                         )}
+                        {filteredChats.map(chat => (
+                            <div
+                                key={chat.id}
+                                onClick={() => navigate(`/c/${chat.id}`)}
+                                className="chat-item"
+                            >
+                                {chat.displayPic ? (
+                                    <img src={chat.displayPic} alt="" className="profile-pic" />
+                                ) : (
+                                    <div className="profile-pic" style={{ background: 'var(--input-bg)', color: 'var(--app-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' }}>
+                                        {chat.type === 'group' ? '👥' : '👤'}
+                                    </div>
+                                )}
 
-                        <div className="chat-item-details">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                                <strong>
-                                    {/* Real-time Online Indicator */}
-                                    {chat.type !== 'group' && chat.friendId ? (
-                                        <OnlineIndicator userId={chat.friendId} onProfileUpdate={handleProfileUpdate} />
-                                    ) : chat.displayName === 'Me' ? (
-                                        <span className="online-dot" style={{ marginRight: '5px' }}></span>
-                                    ) : null}
+                                <div className="chat-item-details">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                        <strong>
+                                            {chat.type !== 'group' && chat.friendId ? (
+                                                <OnlineIndicator userId={chat.friendId} onProfileUpdate={handleProfileUpdate} />
+                                            ) : chat.displayName === 'Me' ? (
+                                                <span className="online-dot" style={{ marginRight: '5px' }}></span>
+                                            ) : null}
+                                            {chat.displayName}
+                                        </strong>
+                                        {chat.unreadCounts?.[currentUser.uid] > 0 && (
+                                            <span style={{
+                                                background: 'var(--danger)',
+                                                color: 'white',
+                                                borderRadius: '50%',
+                                                width: '20px',
+                                                height: '20px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 'bold',
+                                                marginLeft: 'auto'
+                                            }}>
+                                                {chat.unreadCounts[currentUser.uid]}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <small style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {chat.lastMessage || "No messages yet"}
+                                        <span className="time-badge">
+                                            {chat.lastUpdate?.seconds ? new Date(chat.lastUpdate.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                        </span>
+                                    </small>
+                                </div>
 
-                                    {chat.displayName}
-                                </strong>
-                                {chat.unreadCounts?.[currentUser.uid] > 0 && (
-                                    <span style={{
-                                        background: 'var(--danger)',
-                                        color: 'white',
-                                        borderRadius: '50%',
-                                        width: '20px',
-                                        height: '20px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 'bold',
-                                        marginLeft: 'auto'
-                                    }}>
-                                        {chat.unreadCounts[currentUser.uid]}
-                                    </span>
+                                {showArchived ? (
+                                    <div className="archive-btn" onClick={(e) => unarchiveChat(e, chat.id)} title="Unarchive Chat" style={{ color: 'var(--primary)' }}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                    </div>
+                                ) : (
+                                    <div className="archive-btn" onClick={(e) => archiveChat(e, chat.id)} title="Archive Chat">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8v13H3V8" /><rect x="1" y="3" width="22" height="5" /><line x1="10" y1="12" x2="14" y2="12" /></svg>
+                                    </div>
                                 )}
                             </div>
-                            <small style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {chat.lastMessage || "No messages yet"}
-                                <span className="time-badge">
-                                    {chat.lastUpdate?.seconds ? new Date(chat.lastUpdate.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                                </span>
-                            </small>
-                        </div>
-
-                        {showArchived ? (
-                            <div className="archive-btn" onClick={(e) => unarchiveChat(e, chat.id)} title="Unarchive Chat" style={{ color: 'var(--primary)' }}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                            </div>
-                        ) : (
-                            <div className="archive-btn" onClick={(e) => archiveChat(e, chat.id)} title="Archive Chat">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8v13H3V8" /><rect x="1" y="3" width="22" height="5" /><line x1="10" y1="12" x2="14" y2="12" /></svg>
-                            </div>
-                        )}
-                    </div>
-                ))}
+                        ))}
+                    </>
+                )}
             </div>
         </div>
     );

@@ -1,5 +1,25 @@
 # Project Changelog
 
+## Version 2.23 - Call History & Details 📞
+**Date:** 10th February 2026
+
+**New Features:**
+- **Persistent Call History**: Keep track of all your calls!
+  - **New "Calls" Tab**: Dedicated tab in the sidebar to view call logs separately from chats.
+  - **Detailed Logs**: View incoming, outgoing, and missed calls with status icons (↙️/↗️).
+  - **Smart Timestamps**: Relative times ("Today", "Yesterday") for easy reading.
+  - **Data Usage Tracking**: View estimated data consumption for each call (e.g., "1.2 MB").
+  - **One-Tap Callback**: Quickly call back directly from the history list.
+- **Chat Call Events**:
+  - **System Messages**: "📞 Voice Call" or "📹 Video Call" bubbles appear in the chat stream when a call ends.
+  - **Status & Duration**: See at a glance if a call was missed or how long it lasted.
+
+**Technical:**
+- **Firestore**: Implemented `callLogs` collection with composite indexes for efficient querying.
+- **Optimized**: Stale call sessions are now automatically cleared to prevent "User Busy" errors.
+
+---
+
 ## Version 2.22 - PWA Video/Audio Calling 📹🔊
 **Date:** 9th February 2026
 

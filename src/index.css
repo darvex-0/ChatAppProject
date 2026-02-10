@@ -1210,3 +1210,173 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
+
+/* ======= SIDEBAR TABS (Chats / Calls) ======= */
+.sidebar-tabs {
+  display: flex;
+  width: 100%;
+  gap: 4px;
+  background: var(--input-bg);
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-tab {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--app-text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+}
+
+.sidebar-tab:hover {
+  color: var(--app-text);
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.sidebar-tab.active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.35);
+}
+
+/* ======= CALL LOG ITEM ======= */
+.call-log-item {
+  padding: 0.85rem 1rem;
+  background: var(--input-bg);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.call-log-item:hover {
+  background: rgba(30, 41, 59, 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.call-log-details {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.call-log-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.call-log-name-row strong {
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.call-log-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  color: var(--app-text-muted);
+  font-size: 0.8rem;
+}
+
+.call-log-type-icon {
+  display: flex;
+  align-items: center;
+  opacity: 0.7;
+}
+
+.call-log-time {
+  white-space: nowrap;
+}
+
+.call-log-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 3px;
+  font-size: 0.72rem;
+  color: var(--app-text-muted);
+  opacity: 0.8;
+}
+
+.call-log-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 0.75rem;
+  flex-shrink: 0;
+}
+
+.call-log-action:hover {
+  background: rgba(99, 102, 241, 0.25);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+/* ======= CALL EVENT MESSAGE (In-chat, WhatsApp-style) ======= */
+.call-event-message {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 0.5rem 0;
+}
+
+.call-event-bubble {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--system-msg-bg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+  padding: 0.4rem 1rem;
+  font-size: 0.8rem;
+  color: var(--app-text-muted);
+  backdrop-filter: blur(5px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  animation: messageSlide 0.2s ease-out;
+}
+
+.call-event-icon {
+  display: flex;
+  align-items: center;
+}
+
+.call-event-text {
+  font-weight: 500;
+  color: var(--app-text);
+  white-space: nowrap;
+}
+
+.call-event-time {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  margin-left: 4px;
+  white-space: nowrap;
+}

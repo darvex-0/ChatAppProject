@@ -95,6 +95,29 @@ function MessageItem({ msg, currentUser, chatInfo, initiateReply, initiateForwar
         return <div className="message system"><span>{msg.text.replace(currentUser.displayName, "You")}</span></div>;
     }
 
+    // Call Event Message (WhatsApp-style)
+    if (msg.type === 'call_event') {
+        const isVideoCall = msg.callType === 'video';
+        const isMissed = msg.callStatus === 'missed' || msg.callStatus === 'declined';
+        return (
+            <div className="call-event-message">
+                <div className="call-event-bubble">
+                    <span className="call-event-icon" style={{ color: isMissed ? '#ef4444' : 'var(--primary)' }}>
+                        {isVideoCall ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                        )}
+                    </span>
+                    <span className="call-event-text">{msg.text}</span>
+                    <span className="call-event-time">
+                        {msg.timestamp?.seconds ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''}
+                    </span>
+                </div>
+            </div>
+        );
+    }
+
     const reactionCounts = {};
     if (msg.reactions) Object.values(msg.reactions).forEach(e => reactionCounts[e] = (reactionCounts[e] || 0) + 1);
 

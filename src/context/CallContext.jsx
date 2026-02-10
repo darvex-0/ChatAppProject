@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { db } from '../services/firebase';
-import { doc, setDoc, getDoc, onSnapshot, deleteDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { doc, setDoc, getDoc, onSnapshot, deleteDoc, collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, updateDoc, increment } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 
 const CallContext = createContext();
@@ -58,6 +58,15 @@ export function CallProvider({ children }) {
     const turnServersRef = useRef(null);
     const usingTurnRef = useRef(false);
 
+    // Call History tracking
+    const callStartTimeRef = useRef(null); // When call became 'active'
+    const dataUsageRef = useRef({ bytesSent: 0, bytesReceived: 0 }); // Data usage
+    const chatIdForCallRef = useRef(null); // Chat ID to insert call event message
+    const callLoggedRef = useRef(false); // Prevent duplicate logging
+    const remoteUserRef = useRef(null); // Ref for cleanup access
+    const callTypeRef = useRef(null); // Ref for cleanup access
+    const [callHistory, setCallHistory] = useState([]);
+
     // Fetch TURN credentials on mount (but don't use them by default)
     useEffect(() => {
         const fetchTurnServers = async () => {
@@ -103,9 +112,121 @@ export function CallProvider({ children }) {
         }
     }, []);
 
+    // Get data usage from RTCPeerConnection stats
+    const getDataUsage = useCallback(async () => {
+        if (!peerConnectionRef.current) return { bytesSent: 0, bytesReceived: 0 };
+        try {
+            const stats = await peerConnectionRef.current.getStats();
+            let bytesSent = 0, bytesReceived = 0;
+            stats.forEach(report => {
+                if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                    bytesSent += report.bytesSent || 0;
+                    bytesReceived += report.bytesReceived || 0;
+                }
+            });
+            return { bytesSent, bytesReceived };
+        } catch (e) {
+            console.error('Error getting data usage:', e);
+            return { bytesSent: 0, bytesReceived: 0 };
+        }
+    }, []);
+
+    // Log call to callLogs collection and send chat event message
+    const logCall = useCallback(async (status, duration, dataUsage) => {
+        if (!currentUser || callLoggedRef.current) return;
+        const remote = remoteUserRef.current;
+        const type = callTypeRef.current;
+        if (!remote?.uid) return;
+
+        callLoggedRef.current = true;
+        const participants = [currentUser.uid, remote.uid].sort();
+
+        try {
+            // 1. Save call log
+            await addDoc(collection(db, 'callLogs'), {
+                participants,
+                callerId: currentUser.uid,
+                callerName: currentUser.displayName || 'User',
+                callerPhoto: currentUser.photoURL || '',
+                receiverId: remote.uid,
+                receiverName: remote.name || 'User',
+                receiverPhoto: remote.photo || '',
+                type: type || 'audio',
+                status, // 'ended', 'missed', 'declined'
+                duration: duration || 0,
+                dataUsage: {
+                    bytesSent: dataUsage?.bytesSent || 0,
+                    bytesReceived: dataUsage?.bytesReceived || 0,
+                    totalBytes: (dataUsage?.bytesSent || 0) + (dataUsage?.bytesReceived || 0)
+                },
+                timestamp: serverTimestamp()
+            });
+
+            // 2. Insert call event message in chat (like WhatsApp)
+            const chatId = chatIdForCallRef.current;
+            if (chatId) {
+                const callLabel = type === 'video' ? 'Video call' : 'Voice call';
+                let callStatus = '';
+                if (status === 'missed') callStatus = ' - Missed';
+                else if (status === 'declined') callStatus = ' - Declined';
+                else if (duration > 0) {
+                    const mins = Math.floor(duration / 60);
+                    const secs = duration % 60;
+                    callStatus = ` - ${mins}:${secs.toString().padStart(2, '0')}`;
+                }
+
+                const callMsg = {
+                    sender: currentUser.uid,
+                    senderName: currentUser.displayName || 'User',
+                    timestamp: serverTimestamp(),
+                    type: 'call_event',
+                    callType: type || 'audio',
+                    callStatus: status,
+                    callDuration: duration || 0,
+                    text: `${callLabel}${callStatus}`,
+                    status: 'sent'
+                };
+                await addDoc(collection(db, 'chats', chatId, 'messages'), callMsg);
+
+                // Update chat's lastMessage
+                const chatRef = doc(db, 'chats', chatId);
+                const chatDoc = await getDoc(chatRef);
+                if (chatDoc.exists()) {
+                    const chatData = chatDoc.data();
+                    const updates = {
+                        lastMessage: `📞 ${callLabel}${callStatus}`,
+                        lastUpdate: serverTimestamp()
+                    };
+                    // Increment unread for other members
+                    if (chatData.members) {
+                        chatData.members.forEach(memberId => {
+                            if (memberId !== currentUser.uid) {
+                                updates[`unreadCounts.${memberId}`] = increment(1);
+                            }
+                        });
+                    }
+                    await updateDoc(chatRef, updates);
+                }
+            }
+        } catch (e) {
+            console.error('Error logging call:', e);
+        }
+    }, [currentUser]);
+
     // Cleanup function
     const cleanup = useCallback(async (status = 'ended') => {
         console.log('Call cleanup:', status);
+
+        // Capture data usage BEFORE closing peer connection
+        let dataUsage = { bytesSent: 0, bytesReceived: 0 };
+        if (peerConnectionRef.current) {
+            dataUsage = await getDataUsage();
+        }
+
+        // Capture duration before reset
+        const finalDuration = callStartTimeRef.current
+            ? Math.floor((Date.now() - callStartTimeRef.current) / 1000)
+            : 0;
 
         // Stop ringtone
         if (ringtoneRef.current) {
@@ -166,8 +287,16 @@ export function CallProvider({ children }) {
             }
         }
 
+        // Log the call to callLogs + insert chat message
+        await logCall(status, finalDuration, dataUsage);
+
         // Reset state
         usingTurnRef.current = false;
+        callStartTimeRef.current = null;
+        callLoggedRef.current = false;
+        chatIdForCallRef.current = null;
+        remoteUserRef.current = null;
+        callTypeRef.current = null;
         setCallState('idle');
         setCallType(null);
         setRemoteUser(null);
@@ -177,7 +306,7 @@ export function CallProvider({ children }) {
         setIsMuted(false);
         setIsCameraOff(false);
         setCallDuration(0);
-    }, [callId, currentUser, releaseWakeLock, closeCallNotification]);
+    }, [callId, currentUser, releaseWakeLock, closeCallNotification, getDataUsage, logCall]);
 
     // Listen for Service Worker messages (e.g., DECLINE_CALL from notification)
     useEffect(() => {
@@ -244,12 +373,33 @@ export function CallProvider({ children }) {
 
                     setCallId(change.doc.id);
                     setCallType(data.type);
-                    setRemoteUser({
+                    callTypeRef.current = data.type;
+                    const incomingRemote = {
                         uid: data.callerId,
                         name: data.callerName,
                         photo: data.callerPhoto
-                    });
+                    };
+                    setRemoteUser(incomingRemote);
+                    remoteUserRef.current = incomingRemote;
                     setCallState('incoming');
+
+                    // Find chat ID for incoming call
+                    (async () => {
+                        try {
+                            const chatsQ = query(
+                                collection(db, 'chats'),
+                                where('members', 'array-contains', currentUser.uid)
+                            );
+                            const chatsSnap = await getDocs(chatsQ);
+                            const matchingChat = chatsSnap.docs.find(d => {
+                                const chatData = d.data();
+                                return chatData.type !== 'group' && chatData.members?.includes(data.callerId);
+                            });
+                            if (matchingChat) chatIdForCallRef.current = matchingChat.id;
+                        } catch (e) {
+                            console.warn('Could not find chat for incoming call logging:', e);
+                        }
+                    })();
 
                     // Play ringtone
                     try {
@@ -331,6 +481,7 @@ export function CallProvider({ children }) {
             console.log('Connection state:', pc.connectionState);
             if (pc.connectionState === 'connected') {
                 setCallState('active');
+                callStartTimeRef.current = Date.now(); // Track call start
                 requestWakeLock();
             } else if (pc.connectionState === 'failed') {
                 // STUN failed → retry with TURN if available
@@ -440,21 +591,48 @@ export function CallProvider({ children }) {
             }
             const receiverData = receiverDoc.data();
 
-            // Check if receiver is already in a call
+            // Check if receiver is already in a call (or if we have a stuck session)
             const activeCallId = getCallId(currentUser.uid, receiverUid);
             const existingCall = await getDoc(doc(db, 'calls', activeCallId));
-            if (existingCall.exists() && ['offering', 'answered'].includes(existingCall.data().status)) {
-                return { success: false, error: 'User is busy on another call.' };
+
+            if (existingCall.exists()) {
+                const data = existingCall.data();
+                const isActive = ['offering', 'answered'].includes(data.status);
+                const createdAt = data.createdAt?.toMillis() || 0;
+                const isStale = (Date.now() - createdAt) > 60000; // Consider stale if > 1 min old
+
+                if (isActive && !isStale) {
+                    return { success: false, error: 'User is busy on another call.' };
+                }
             }
 
             setCallState('outgoing');
             setCallType(type);
-            setRemoteUser({
+            callTypeRef.current = type;
+            const remoteInfo = {
                 uid: receiverUid,
                 name: receiverData.name || 'User',
                 photo: receiverData.photoURL
-            });
+            };
+            setRemoteUser(remoteInfo);
+            remoteUserRef.current = remoteInfo;
             setCallId(activeCallId);
+
+            // Find chat ID for this user pair to insert call event message
+            try {
+                const chatsQ = query(
+                    collection(db, 'chats'),
+                    where('members', 'array-contains', currentUser.uid)
+                );
+                const chatsSnap = await getDocs(chatsQ);
+                const matchingChat = chatsSnap.docs.find(d => {
+                    const data = d.data();
+                    return data.type !== 'group' && data.members?.includes(receiverUid);
+                });
+                if (matchingChat) chatIdForCallRef.current = matchingChat.id;
+            } catch (e) {
+                console.warn('Could not find chat for call logging:', e);
+            }
 
             // Get media stream
             const stream = await getMediaStream(type);
@@ -640,6 +818,21 @@ export function CallProvider({ children }) {
         }
     }, []);
 
+    // Listen for call history
+    useEffect(() => {
+        if (!currentUser) return;
+        const q = query(
+            collection(db, 'callLogs'),
+            where('participants', 'array-contains', currentUser.uid),
+            orderBy('timestamp', 'desc')
+        );
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const logs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            setCallHistory(logs);
+        });
+        return () => unsubscribe();
+    }, [currentUser]);
+
     return (
         <CallContext.Provider value={{
             callState,
@@ -655,7 +848,8 @@ export function CallProvider({ children }) {
             endCall,
             toggleMute,
             toggleCamera,
-            callDuration
+            callDuration,
+            callHistory
         }}>
             {children}
         </CallContext.Provider>
