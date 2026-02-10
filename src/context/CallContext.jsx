@@ -5,13 +5,11 @@ import { useAuth } from './AuthContext';
 
 const CallContext = createContext();
 
-// Free STUN servers for NAT traversal (~80% success rate)
-const ICE_SERVERS = {
+// STUN-only servers (free, unlimited, for same-network calls)
+const STUN_SERVERS = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
     ]
 };
 
@@ -33,6 +31,9 @@ export function CallProvider({ children }) {
     const [localStream, setLocalStream] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
 
+    // Call Duration (seconds)
+    const [callDuration, setCallDuration] = useState(0);
+
     // WebRTC
     const peerConnectionRef = useRef(null);
     const localStreamRef = useRef(null);
@@ -42,21 +43,45 @@ export function CallProvider({ children }) {
     // Ringtone
     const ringtoneRef = useRef(null);
 
+    // Call Timeout (30 seconds)
+    const callTimeoutRef = useRef(null);
+    const durationIntervalRef = useRef(null);
+
     // Ref to declineCall for Service Worker message handler
     const declineCallRef = useRef(null);
 
     // Wake Lock (keep screen awake during calls)
     const wakeLockRef = useRef(null);
 
+    // TURN servers from Metered.ca (fetched on mount, used only as fallback)
+    const METERED_API_KEY = '317e89a9697d7c274ffe6fc5f24817d5e405';
+    const turnServersRef = useRef(null);
+    const usingTurnRef = useRef(false);
+
+    // Fetch TURN credentials on mount (but don't use them by default)
+    useEffect(() => {
+        const fetchTurnServers = async () => {
+            try {
+                const response = await fetch(`https://connecthub.metered.live/api/v1/turn/credentials?apiKey=${METERED_API_KEY}`);
+                if (response.ok) {
+                    const servers = await response.json();
+                    turnServersRef.current = servers;
+                    console.log('TURN servers pre-fetched (standby)');
+                }
+            } catch (error) {
+                console.warn('Could not pre-fetch TURN servers:', error);
+            }
+        };
+        fetchTurnServers();
+    }, []);
+
     // Request Wake Lock
     const requestWakeLock = useCallback(async () => {
-        // Only request if page is visible
         if ('wakeLock' in navigator && document.visibilityState === 'visible') {
             try {
                 wakeLockRef.current = await navigator.wakeLock.request('screen');
                 console.log('Wake Lock acquired');
             } catch (e) {
-                // Silently fail - Wake Lock is a nice-to-have
                 console.log('Wake Lock not available');
             }
         }
@@ -86,6 +111,18 @@ export function CallProvider({ children }) {
         if (ringtoneRef.current) {
             ringtoneRef.current.pause();
             ringtoneRef.current.currentTime = 0;
+        }
+
+        // Clear call timeout
+        if (callTimeoutRef.current) {
+            clearTimeout(callTimeoutRef.current);
+            callTimeoutRef.current = null;
+        }
+
+        // Clear duration interval
+        if (durationIntervalRef.current) {
+            clearInterval(durationIntervalRef.current);
+            durationIntervalRef.current = null;
         }
 
         // Release Wake Lock
@@ -130,6 +167,7 @@ export function CallProvider({ children }) {
         }
 
         // Reset state
+        usingTurnRef.current = false;
         setCallState('idle');
         setCallType(null);
         setRemoteUser(null);
@@ -138,6 +176,7 @@ export function CallProvider({ children }) {
         setRemoteStream(null);
         setIsMuted(false);
         setIsCameraOff(false);
+        setCallDuration(0);
     }, [callId, currentUser, releaseWakeLock, closeCallNotification]);
 
     // Listen for Service Worker messages (e.g., DECLINE_CALL from notification)
@@ -159,10 +198,8 @@ export function CallProvider({ children }) {
     useEffect(() => {
         const handleBeforeUnload = () => {
             if (callState === 'outgoing') {
-                // Mark as missed if we're the caller and closing tab
                 cleanup('missed');
             } else if (callState === 'incoming') {
-                // Mark as missed if we're the receiver and closing tab
                 cleanup('missed');
             } else if (callState === 'active') {
                 cleanup('ended');
@@ -173,11 +210,29 @@ export function CallProvider({ children }) {
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, [callState, cleanup]);
 
+    // Call Duration Timer - updates every second when call is active
+    useEffect(() => {
+        if (callState === 'active') {
+            durationIntervalRef.current = setInterval(() => {
+                setCallDuration(prev => prev + 1);
+            }, 1000);
+        } else {
+            if (durationIntervalRef.current) {
+                clearInterval(durationIntervalRef.current);
+                durationIntervalRef.current = null;
+            }
+        }
+        return () => {
+            if (durationIntervalRef.current) {
+                clearInterval(durationIntervalRef.current);
+            }
+        };
+    }, [callState]);
+
     // Listen for incoming calls
     useEffect(() => {
         if (!currentUser) return;
 
-        // Query for calls where I'm the receiver and status is 'offering'
         const callsRef = collection(db, 'calls');
         const q = query(callsRef, where('receiverId', '==', currentUser.uid), where('status', '==', 'offering'));
 
@@ -196,7 +251,7 @@ export function CallProvider({ children }) {
                     });
                     setCallState('incoming');
 
-                    // Play ringtone (using a reliable public ringtone)
+                    // Play ringtone
                     try {
                         ringtoneRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
                         ringtoneRef.current.loop = true;
@@ -205,7 +260,7 @@ export function CallProvider({ children }) {
                         console.error('Error playing ringtone:', e);
                     }
 
-                    // Notify Service Worker to show system notification
+                    // Notify Service Worker
                     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
                         navigator.serviceWorker.controller.postMessage({
                             type: 'INCOMING_CALL',
@@ -236,9 +291,23 @@ export function CallProvider({ children }) {
         }
     }, []);
 
-    // Create peer connection
-    const createPeerConnection = useCallback((currentCallId) => {
-        const pc = new RTCPeerConnection(ICE_SERVERS);
+    // Create peer connection with ICE config
+    // useTurn = false → STUN only (same-network, free)
+    // useTurn = true  → STUN + TURN (cross-network, uses Metered quota)
+    const createPeerConnection = useCallback((currentCallId, useTurn = false) => {
+        let iceConfig;
+        if (useTurn && turnServersRef.current) {
+            // Cross-network: use TURN servers from Metered.ca
+            iceConfig = { iceServers: turnServersRef.current };
+            usingTurnRef.current = true;
+            console.log('Using TURN servers (cross-network fallback)');
+        } else {
+            // Same-network: use free STUN servers only
+            iceConfig = STUN_SERVERS;
+            console.log('Using STUN servers (same-network)');
+        }
+
+        const pc = new RTCPeerConnection(iceConfig);
 
         pc.onicecandidate = async (event) => {
             if (event.candidate) {
@@ -262,15 +331,99 @@ export function CallProvider({ children }) {
             console.log('Connection state:', pc.connectionState);
             if (pc.connectionState === 'connected') {
                 setCallState('active');
-                requestWakeLock(); // Keep screen awake during active call
-            } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-                cleanup('ended');
+                requestWakeLock();
+            } else if (pc.connectionState === 'failed') {
+                // STUN failed → retry with TURN if available
+                if (!usingTurnRef.current && turnServersRef.current) {
+                    console.log('STUN connection failed, retrying with TURN...');
+                    retryWithTurn(currentCallId);
+                } else {
+                    cleanup('ended');
+                }
+            } else if (pc.connectionState === 'disconnected') {
+                // Give it a few seconds before ending (could be temporary)
+                setTimeout(() => {
+                    if (pc.connectionState === 'disconnected') {
+                        cleanup('ended');
+                    }
+                }, 5000);
             }
         };
 
         peerConnectionRef.current = pc;
         return pc;
     }, [currentUser, cleanup, requestWakeLock]);
+
+    // Retry failed STUN connection with TURN servers
+    const retryWithTurn = useCallback(async (currentCallId) => {
+        console.log('Retrying call with TURN servers...');
+
+        // Close old peer connection
+        if (peerConnectionRef.current) {
+            peerConnectionRef.current.close();
+            peerConnectionRef.current = null;
+        }
+
+        // Unsubscribe old ICE listener
+        if (iceCandidatesUnsubscribeRef.current) {
+            iceCandidatesUnsubscribeRef.current();
+            iceCandidatesUnsubscribeRef.current = null;
+        }
+
+        try {
+            // Create new PC with TURN
+            const pc = createPeerConnection(currentCallId, true);
+
+            // Re-add local tracks
+            if (localStreamRef.current) {
+                localStreamRef.current.getTracks().forEach(track => pc.addTrack(track, localStreamRef.current));
+            }
+
+            // Check if we are the caller or answerer
+            const callDoc = await getDoc(doc(db, 'calls', currentCallId));
+            if (!callDoc.exists()) return;
+            const callData = callDoc.data();
+
+            if (callData.callerId === currentUser.uid) {
+                // We are the caller - create new offer
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                await setDoc(doc(db, 'calls', currentCallId), {
+                    offer: { type: offer.type, sdp: offer.sdp },
+                    turnRetry: true
+                }, { merge: true });
+            } else {
+                // We are the answerer - set offer and create new answer
+                if (callData.offer) {
+                    await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+                    await setDoc(doc(db, 'calls', currentCallId), {
+                        answer: { type: answer.type, sdp: answer.sdp },
+                        turnRetry: true
+                    }, { merge: true });
+                }
+            }
+
+            // Re-listen for ICE candidates
+            iceCandidatesUnsubscribeRef.current = onSnapshot(
+                collection(db, 'calls', currentCallId, 'iceCandidates'),
+                (snapshot) => {
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === 'added') {
+                            const data = change.doc.data();
+                            if (data.from !== currentUser.uid && pc.remoteDescription) {
+                                pc.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(console.error);
+                            }
+                        }
+                    });
+                }
+            );
+        } catch (e) {
+            console.error('TURN retry failed:', e);
+            cleanup('ended');
+        }
+    }, [currentUser, createPeerConnection, cleanup]);
 
     // Start outgoing call
     const callUser = useCallback(async (receiverUid, type) => {
@@ -306,8 +459,8 @@ export function CallProvider({ children }) {
             // Get media stream
             const stream = await getMediaStream(type);
 
-            // Create peer connection
-            const pc = createPeerConnection(activeCallId);
+            // Create peer connection (STUN first)
+            const pc = createPeerConnection(activeCallId, false);
             stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
             // Create offer
@@ -356,6 +509,12 @@ export function CallProvider({ children }) {
                 }
             );
 
+            // Set call timeout (30 seconds)
+            callTimeoutRef.current = setTimeout(() => {
+                console.log('Call timeout - no answer');
+                cleanup('missed');
+            }, 30000);
+
             return { success: true };
         } catch (e) {
             console.error('Error starting call:', e);
@@ -392,8 +551,8 @@ export function CallProvider({ children }) {
             // Get media stream
             const stream = await getMediaStream(callType);
 
-            // Create peer connection
-            const pc = createPeerConnection(callId);
+            // Create peer connection (STUN first)
+            const pc = createPeerConnection(callId, false);
             stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
             // Set remote description (offer)
@@ -495,7 +654,8 @@ export function CallProvider({ children }) {
             declineCall,
             endCall,
             toggleMute,
-            toggleCamera
+            toggleCamera,
+            callDuration
         }}>
             {children}
         </CallContext.Provider>

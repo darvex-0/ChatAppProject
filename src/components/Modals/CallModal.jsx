@@ -14,8 +14,16 @@ export default function CallModal() {
         declineCall,
         endCall,
         toggleMute,
-        toggleCamera
+        toggleCamera,
+        callDuration
     } = useCall();
+
+    // Format duration as MM:SS
+    const formatDuration = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
 
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
@@ -287,6 +295,26 @@ export default function CallModal() {
             {/* Active Call UI */}
             {callState === 'active' && (
                 <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                    {/* Call Duration Timer */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '20px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        background: 'rgba(0,0,0,0.6)',
+                        backdropFilter: 'blur(10px)',
+                        padding: '8px 20px',
+                        borderRadius: '20px',
+                        zIndex: 10,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                    }}>
+                        <span style={{ color: '#22c55e', fontSize: '10px' }}>●</span>
+                        <span style={{ color: 'white', fontWeight: 500, fontFamily: 'monospace', fontSize: '1rem' }}>
+                            {formatDuration(callDuration)}
+                        </span>
+                    </div>
                     {/* Remote Video (Full Screen) */}
                     {callType === 'video' ? (
                         <video

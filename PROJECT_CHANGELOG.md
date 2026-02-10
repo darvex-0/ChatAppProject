@@ -24,6 +24,9 @@
   - **STUN Servers**: Google's public STUN for NAT traversal
   - **Ghost Ring Fix**: Auto-cleanup on tab close/reload
   - **Collision-Safe IDs**: Alphabetically sorted call IDs prevent duplicates
+  - **Call Timeout**: Auto-ends unanswered calls after 30 seconds (marks as missed)
+  - **Call Duration Timer**: Real-time MM:SS timer during active calls
+  - **TURN Server**: Integrated Metered.ca TURN for reliable cross-network calls (WiFi ↔ 4G)
 
 **Technical Details:**
 - `CallContext.jsx`: WebRTC logic, Wake Lock, SW messaging
