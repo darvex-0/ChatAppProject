@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
@@ -37,7 +37,7 @@ function OnlineIndicator({ userId, onProfileUpdate }) {
 export default function Sidebar() {
     const { currentUser } = useAuth();
     const { searchQuery, setSearchQuery, notificationPermission, requestNotificationPermission, notificationSettings } = useUI();
-    const { callHistory, callUser } = useCall();
+    const { callHistory, callUser, setCallInfoContact } = useCall();
     const [chats, setChats] = useState([]);
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('chats'); // 'chats' | 'calls'
@@ -306,6 +306,32 @@ export default function Sidebar() {
         return name?.toLowerCase().includes(searchQuery.toLowerCase());
     });
 
+    const handleCallLogClick = (log) => {
+        const isCaller = log.callerId === currentUser.uid;
+        const friendId = isCaller ? log.receiverId : log.callerId;
+        const friendName = isCaller ? log.receiverName : log.callerName;
+        const friendPhoto = isCaller ? log.receiverPhoto : log.callerPhoto;
+
+        // Find existing chat to pass chatId (avoid fetch if possible)
+        const chat = chats.find(c => c.type !== 'group' && c.members && c.members.includes(friendId));
+
+        setCallInfoContact({
+            uid: friendId,
+            name: friendName,
+            photo: friendPhoto,
+            chatId: chat?.id
+        });
+    };
+
+    const handleDeleteCallLog = async (logId) => {
+        try {
+            await deleteDoc(doc(db, "callLogs", logId));
+        } catch (error) {
+            console.error("Error deleting call log:", error);
+            alert("Failed to delete call log");
+        }
+    };
+
     return (
         <div id="inbox">
             <div className="inbox-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
@@ -477,7 +503,12 @@ export default function Sidebar() {
                             </div>
                         ) : (
                             filteredCallHistory.map(log => (
-                                <CallLogItem key={log.id} log={log} />
+                                <CallLogItem
+                                    key={log.id}
+                                    log={log}
+                                    onClick={() => handleCallLogClick(log)}
+                                    onDelete={handleDeleteCallLog}
+                                />
                             ))
                         )}
                     </>

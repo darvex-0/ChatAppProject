@@ -66,6 +66,7 @@ export function CallProvider({ children }) {
     const remoteUserRef = useRef(null); // Ref for cleanup access
     const callTypeRef = useRef(null); // Ref for cleanup access
     const [callHistory, setCallHistory] = useState([]);
+    const [callInfoContact, setCallInfoContact] = useState(null);
 
     // Fetch TURN credentials on mount (but don't use them by default)
     useEffect(() => {
@@ -849,7 +850,9 @@ export function CallProvider({ children }) {
             toggleMute,
             toggleCamera,
             callDuration,
-            callHistory
+            callHistory,
+            callInfoContact,
+            setCallInfoContact
         }}>
             {children}
         </CallContext.Provider>

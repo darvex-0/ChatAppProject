@@ -10,6 +10,7 @@ import NotificationToast from './NotificationToast';
 import CustomAlert from './CustomAlert';
 import StarredMessagesModal from './Modals/StarredMessagesModal';
 import CallModal from './Modals/CallModal';
+import CallInfoModal from './Modals/CallInfoModal';
 
 
 export default function Layout() {
@@ -95,6 +96,7 @@ export default function Layout() {
 
             {/* Call Modal - Always rendered, shows based on call state */}
             <CallModal />
+            <CallInfoModal />
         </CallProvider>
     );
 }

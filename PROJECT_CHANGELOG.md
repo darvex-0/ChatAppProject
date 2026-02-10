@@ -1,5 +1,28 @@
 # Project Changelog
 
+## Version 2.24 - Enhanced Call History Management 🗑️
+**Date:** 10th February 2026
+
+**New Features:**
+- **Delete Call Logs**: Remove unwanted call logs from your history
+  - **Trash Icon Button**: Delete button appears next to each call log in the sidebar
+  - **Call Info Modal**: Delete individual calls from the detailed call history view
+  - **Confirmation Dialog**: Prevents accidental deletions with confirmation prompt
+  - **Instant Update**: Deleted logs disappear immediately via real-time sync
+  - **Database Removal**: Permanently removes call logs from Firestore
+- **"Not Answered" Status**: Clearer feedback for missed and declined calls
+  - **Visual Indicator**: Missed/declined calls show "Not answered" in red
+  - **Smart Detection**: Automatically detects unanswered calls (zero duration or declined status)
+  - **Consistent Display**: Shows in both sidebar call logs and Call Info modal
+  - **Time Display**: Shows "Not answered • [Time]" for easy reference
+
+**Technical:**
+- Updated Firestore security rules to allow participants to delete their own call logs
+- Enhanced call log UI with delete button (red trash icon)
+- Improved status detection logic to include zero-duration calls as unanswered
+
+---
+
 ## Version 2.23 - Call History & Details 📞
 **Date:** 10th February 2026
 
@@ -47,6 +70,10 @@
   - **Call Timeout**: Auto-ends unanswered calls after 30 seconds (marks as missed)
   - **Call Duration Timer**: Real-time MM:SS timer during active calls
   - **TURN Server**: Integrated Metered.ca TURN for reliable cross-network calls (WiFi ↔ 4G)
+  - **Background Wake-Up**: FCM data messages wake device when app is force-closed
+    - Incoming calls trigger system notifications even when app is killed
+    - High-priority push ensures device wakes from sleep
+    - Answer/Decline actions work directly from notification
 
 **Technical Details:**
 - `CallContext.jsx`: WebRTC logic, Wake Lock, SW messaging

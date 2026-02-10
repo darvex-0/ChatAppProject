@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const UIContext = createContext();
 
@@ -18,9 +18,9 @@ export function UIProvider({ children }) {
         localStorage.setItem('theme', theme);
     }, [theme]);
 
-    const toggleTheme = () => {
+    const toggleTheme = useCallback(() => {
         setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-    };
+    }, []);
 
     // Notification Settings (Persisted)
     const [notificationSettings, setNotificationSettings] = useState(() => {
@@ -33,13 +33,13 @@ export function UIProvider({ children }) {
     });
 
     // Update settings and persist
-    const updateNotificationSettings = (key, value) => {
+    const updateNotificationSettings = useCallback((key, value) => {
         setNotificationSettings(prev => {
             const newSettings = { ...prev, [key]: value };
             localStorage.setItem('notificationSettings', JSON.stringify(newSettings));
             return newSettings;
         });
-    };
+    }, []);
 
     useEffect(() => {
         // Sync permission changes if possible (browsers don't always fire event for this)
@@ -51,7 +51,7 @@ export function UIProvider({ children }) {
         }
     }, []);
 
-    const requestNotificationPermission = async () => {
+    const requestNotificationPermission = useCallback(async () => {
         console.log("Requesting notification permission...");
         try {
             const permission = await Notification.requestPermission();
@@ -62,31 +62,31 @@ export function UIProvider({ children }) {
             console.error("Permission request failed:", e);
             return 'denied';
         }
-    };
+    }, []);
 
-    const showAlert = (message, isHTML = false) => {
+    const showAlert = useCallback((message, isHTML = false) => {
         setAlert({ message, isHTML });
-    };
+    }, []);
 
-    const closeAlert = () => {
+    const closeAlert = useCallback(() => {
         setAlert(null);
-    };
+    }, []);
 
     // Toast State
     const [toast, setToast] = useState(null); // { message, data }
 
-    const showToast = (message, data) => {
+    const showToast = useCallback((message, data) => {
         setToast({ message, data });
-    };
+    }, []);
 
-    const closeToast = () => {
+    const closeToast = useCallback(() => {
         setToast(null);
-    };
+    }, []);
 
-    const toggleSearch = () => {
+    const toggleSearch = useCallback(() => {
         setIsSearchOpen(prev => !prev);
         if (isSearchOpen) setSearchQuery(""); // Clear on close
-    };
+    }, [isSearchOpen]);
 
     return (
         <UIContext.Provider value={{

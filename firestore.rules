@@ -85,7 +85,8 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.uid in resource.data.participants;
       // Create: any authenticated user can log a call
       allow create: if request.auth != null && request.auth.uid in request.resource.data.participants;
-      // No update/delete needed — logs are immutable
+      // Delete: allow participants to delete their own logs
+      allow delete: if request.auth != null && request.auth.uid in resource.data.participants;
     }
   }
 }
