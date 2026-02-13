@@ -2,6 +2,24 @@
 
 # Project Changelog
 
+## Version 2.25 - Personal Notes & Forwarding 📝
+**Date:** 11th February 2026
+
+**New Features:**
+- **Personal Notes Tab**: Dedicated space for personal notes and tasks.
+  - **Create & Manage**: Add, check off (complete), and delete notes.
+  - **Sorting**: Active notes stay on top; completed notes move to the bottom.
+- **Forward to Notes**: Save important messages directly from chats.
+  - **"Save to Notes" Action**: New option in the message hover menu.
+  - **Source Context**: Saved messages show "Forwarded from [Chat Name]" (e.g., "Forwarded from Alice") for easy reference.
+  - **Toast Notifications**: clear feedback when a note is saved.
+
+**Refinements:**
+- **Smart Forwarding Source**: Logic identifying the chat name (Group or User) as the source, even if the sender was "You".
+- **Robustness**: Improved handling of chat context switching to ensure accurate source attribution.
+
+---
+
 ## Version 2.24 - Enhanced Call History Management 🗑️
 **Date:** 10th February 2026
 
