@@ -128,9 +128,8 @@ export default function ChatWindow() {
         setShowEmojiPicker(false);
         setInputText("");
         setDeleteMsgId(null);
-        // We don't reset isRecording here because we might want to let it continue or handle it specifically
-        // But usually, you shouldn't carry a recording to another chat without intent.
-        // For now, let's leave recording as is, but reset UI specific to the previous chat context.
+        setChatInfo(null); // Clear chat info to prevent stale data
+        // ...
     }, [chatId]);
 
     // Fetch chat info
@@ -159,7 +158,7 @@ export default function ChatWindow() {
                         }
                     }
                 }
-                setChatInfo({ name, photo, type, uid, members: data.members });
+                setChatInfo({ id: chatId, name, photo, type, uid, members: data.members });
             }
         };
         fetchChatInfo();
@@ -1583,6 +1582,7 @@ export default function ChatWindow() {
                             msg={{ ...msg, isStarred: starredIds.has(msg.id) }}
                             currentUser={currentUser}
                             chatInfo={chatInfo}
+                            chatId={chatId}
                             initiateReply={initiateReply}
                             initiateForward={initiateForward}
                             addReaction={addReaction}

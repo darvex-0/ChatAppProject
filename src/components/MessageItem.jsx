@@ -1,6 +1,9 @@
 import React, { useState, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import EmojiPicker from 'emoji-picker-react';
+import { db } from '../services/firebase';
+import { collection, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore';
+import { useUI } from '../context/UIContext';
 
 // Helper component for audio messages with duration display
 function AudioPlayer({ src }) {
@@ -83,13 +86,82 @@ function AudioPlayer({ src }) {
     );
 }
 
-function MessageItem({ msg, currentUser, chatInfo, initiateReply, initiateForward, addReaction, confirmDelete, initiateEdit, pinMessage, starMessage, highlightText }) {
+function MessageItem({ msg, currentUser, chatInfo, chatId, initiateReply, initiateForward, addReaction, confirmDelete, initiateEdit, pinMessage, starMessage, highlightText }) {
     const isMe = msg.sender === currentUser.uid;
     const [showOriginalSender, setShowOriginalSender] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [emojiPickerPos, setEmojiPickerPos] = useState({ x: 100, y: 100 });
     const [isDraggingEmoji, setIsDraggingEmoji] = useState(false);
     const emojiDragOffset = useRef({ x: 0, y: 0 });
+    const { showToast } = useUI();
+
+    const saveToNotes = async (msg) => {
+        if (!currentUser) return;
+        try {
+            const content = msg.text || (msg.type === 'image' ? `Image: ${msg.fileURL}` : msg.type === 'video' ? `Video: ${msg.fileURL}` : msg.type === 'file' ? `File: ${msg.fileName} - ${msg.fileURL}` : 'Media');
+
+            // Refined Logic:
+            // 1. Group Chat: "Group Name"
+            // 2. Direct Chat: "Friend Name" (regardless of sender)
+            // 3. Fallback: "Chat"
+
+            let forwardedFrom = "Chat";
+
+            // Use passed chatInfo only if it matches current chat (avoids stale data)
+            // Or if chatInfo doesn't have ID yet (legacy), fallback to ID check/fetch
+            const isChatInfoValid = chatInfo && chatInfo.id === chatId;
+            let activeChatInfo = isChatInfoValid ? chatInfo : null;
+
+            if (!activeChatInfo && chatId) {
+                try {
+                    const chatDoc = await getDoc(doc(db, "chats", chatId));
+                    if (chatDoc.exists()) {
+                        const data = chatDoc.data();
+                        if (data.type === 'group') {
+                            activeChatInfo = { name: data.groupName, type: 'group' };
+                        } else {
+                            const otherUid = data.members?.find(id => id !== currentUser.uid);
+                            if (otherUid) {
+                                const userDoc = await getDoc(doc(db, "users", otherUid));
+                                if (userDoc.exists()) {
+                                    activeChatInfo = { name: userDoc.data().name || userDoc.data().email || "User", type: 'direct' };
+                                }
+                            }
+                        }
+                    } else {
+                        // Chat document not found for ID
+                    }
+                } catch (err) {
+                    console.error("Error fetching fallback chat info:", err);
+                }
+            }
+
+            if (activeChatInfo && (activeChatInfo.name || activeChatInfo.displayName)) {
+                if (activeChatInfo.type === 'group') {
+                    forwardedFrom = activeChatInfo.name || "Group";
+                } else {
+                    forwardedFrom = activeChatInfo.name || activeChatInfo.displayName || "Chat";
+                }
+            } else if (msg.sender === currentUser.uid) {
+                forwardedFrom = "You";
+            } else if (msg.senderName) {
+                forwardedFrom = msg.senderName;
+            }
+
+            await addDoc(collection(db, "users", currentUser.uid, "notes"), {
+                content: content,
+                isCompleted: false,
+                createdAt: serverTimestamp(),
+                source: 'forwarded',
+                originalMessageId: msg.id,
+                forwardedFrom: forwardedFrom
+            });
+            showToast("Saved to Notes ✅");
+        } catch (error) {
+            console.error("Error saving to notes:", error);
+            showToast("Failed to save to notes ❌");
+        }
+    };
 
     if (msg.type === 'system') {
         return <div className="message system"><span>{msg.text.replace(currentUser.displayName, "You")}</span></div>;
@@ -141,6 +213,9 @@ function MessageItem({ msg, currentUser, chatInfo, initiateReply, initiateForwar
                 </span>
                 <span className="option-btn forward-action" title="Forward" onClick={() => initiateForward(msg)}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 10 20 15 15 20"></polyline><path d="M4 4v7a4 4 0 0 0 4 4h12"></path></svg>
+                </span>
+                <span className="option-btn notes-action" title="Save to Notes" onClick={() => saveToNotes(msg)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                 </span>
                 <div className="separator"></div>
                 <span

@@ -1,3 +1,5 @@
+
+
 # Project Changelog
 
 ## Version 2.24 - Enhanced Call History Management 🗑️
