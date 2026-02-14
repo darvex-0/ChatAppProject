@@ -11,6 +11,7 @@ import ChatInfoModal from './Modals/ChatInfoModal';
 import WallpaperModal from './Modals/WallpaperModal';
 import ForwardModal from './Modals/ForwardModal';
 import MediaPreviewModal from './Modals/MediaPreviewModal';
+import VideoRecorder from './VideoRecorder';
 import MessageItem from './MessageItem';
 import { Virtuoso } from 'react-virtuoso';
 import imageCompression from 'browser-image-compression';
@@ -88,6 +89,9 @@ export default function ChatWindow() {
 
     // Media Preview State
     const [previewFile, setPreviewFile] = useState(null);
+
+    // Video Recorder State
+    const [showVideoRecorder, setShowVideoRecorder] = useState(false);
 
     const typingTimeoutRef = useRef(null);
     const inputRef = useRef(null);
@@ -647,6 +651,35 @@ export default function ChatWindow() {
         }
     };
 
+    const sendVideoMessage = async ({ videoURL, thumbnailURL, duration }) => {
+        try {
+            const msgData = {
+                sender: currentUser.uid,
+                senderName: currentUser.displayName || "User",
+                timestamp: serverTimestamp(),
+                type: 'video',
+                videoURL,
+                thumbnailURL,
+                duration,
+                status: 'sent'
+            };
+            await addDoc(collection(db, "chats", chatId, "messages"), msgData);
+
+            const updates = { lastMessage: "📹 Video Message", lastUpdate: serverTimestamp() };
+            if (chatInfo?.members) {
+                chatInfo.members.forEach(memberId => {
+                    if (memberId !== currentUser.uid) {
+                        updates[`unreadCounts.${memberId}`] = increment(1);
+                    }
+                });
+            }
+            await updateDoc(doc(db, "chats", chatId), updates);
+        } catch (e) {
+            console.error("Error sending video:", e);
+            showAlert("Failed to send video message");
+        }
+    };
+
     // --- Other Actions ---
     const handleInputChange = (e) => {
         setInputText(e.target.value);
@@ -726,7 +759,7 @@ export default function ChatWindow() {
     };
 
     const initiateReply = (msg) => {
-        setReplyTo({ id: msg.id, text: msg.text || (msg.type === 'image' ? 'Image' : 'Voice Message'), senderName: msg.senderName });
+        setReplyTo({ id: msg.id, text: msg.text || (msg.type === 'image' ? 'Image' : msg.type === 'video' ? 'Video' : 'Voice Message'), senderName: msg.senderName });
         inputRef.current?.focus();
     };
 
@@ -1880,11 +1913,25 @@ export default function ChatWindow() {
                             />
 
                             {!inputText.trim() ? (
-                                <button type="button" onClick={startRecording} className="icon-btn" style={{ border: 'none', background: 'transparent', color: 'var(--gray)', transition: 'all 0.2s', width: '40px', height: '40px' }} title="Record Voice">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z M19 10v2a7 7 0 0 1-14 0v-2 M12 19v3 M8 22h8"></path>
-                                    </svg>
-                                </button>
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowVideoRecorder(true)}
+                                        className="icon-btn"
+                                        style={{ border: 'none', background: 'transparent', color: 'var(--gray)', transition: 'all 0.2s', width: '40px', height: '40px' }}
+                                        title="Record Video"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                                        </svg>
+                                    </button>
+                                    <button type="button" onClick={startRecording} className="icon-btn" style={{ border: 'none', background: 'transparent', color: 'var(--gray)', transition: 'all 0.2s', width: '40px', height: '40px' }} title="Record Voice">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z M19 10v2a7 7 0 0 1-14 0v-2 M12 19v3 M8 22h8"></path>
+                                        </svg>
+                                    </button>
+                                </>
                             ) : (
                                 <button type="submit" className="icon-btn" title="Send Message" style={{ border: 'none', background: 'transparent' }}>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--primary)' }}><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -2175,6 +2222,13 @@ export default function ChatWindow() {
                 />
             )}
 
+            {/* Video Recorder Modal */}
+            {showVideoRecorder && (
+                <VideoRecorder
+                    onClose={() => setShowVideoRecorder(false)}
+                    onSend={sendVideoMessage}
+                />
+            )}
         </div>
     );
 }

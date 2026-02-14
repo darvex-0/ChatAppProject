@@ -2,6 +2,19 @@
 
 # Project Changelog
 
+## Version 2.26 - Instant Video Messages 📹
+**Date:** 14th February 2026
+
+**New Features:**
+- **Instant Video Bubbles**: Send short, circular video messages directly from the chat input.
+  - **Quick Recording**: one-tap access to record up to 60 seconds of video.
+  - **Cross-Platform**: Works on Chrome, Edge, Firefox, and Safari (iOS/macOS).
+  - **Muted Autoplay**: Videos play silently in the chat feed; tap to unmute.
+  - **Clean UI**: Minimalist circular design for seamless integration.
+  - **Smart Storage**: Videos are compressed and optimized for fast sharing.
+
+---
+
 ## Version 2.25 - Personal Notes & Forwarding 📝
 **Date:** 11th February 2026
 

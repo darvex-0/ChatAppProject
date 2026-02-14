@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import EmojiPicker from 'emoji-picker-react';
 import { db } from '../services/firebase';
@@ -82,6 +82,108 @@ function AudioPlayer({ src }) {
                 onEnded={() => { setIsPlaying(false); setCurrentTime(0); }}
                 style={{ display: 'none' }}
             />
+        </div>
+    );
+}
+
+// Helper component for video messages with circular bubble UI
+function VideoPlayer({ src, thumbnailSrc, duration }) {
+    const videoRef = useRef(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [isMuted, setIsMuted] = useState(true);
+    const [isInView, setIsInView] = useState(true);
+
+    // Intersection Observer to pause when out of view
+    useEffect(() => {
+        if (!videoRef.current) return;
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                setIsInView(entry.isIntersecting);
+                if (!entry.isIntersecting && videoRef.current) {
+                    videoRef.current.pause();
+                    setIsPlaying(false);
+                }
+            },
+            { threshold: 0.5 }
+        );
+
+        observer.observe(videoRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    const toggleMute = () => {
+        if (videoRef.current) {
+            const newMuted = !isMuted;
+            setIsMuted(newMuted);
+            videoRef.current.muted = newMuted;
+
+            // Play if unmuting
+            if (!newMuted && !isPlaying) {
+                videoRef.current.play();
+            }
+        }
+    };
+
+    const formatTime = (seconds) => {
+        if (!seconds || isNaN(seconds)) return "0:00";
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    return (
+        <div style={{
+            position: 'relative',
+            width: '200px',
+            height: '200px',
+            marginTop: '0.5rem',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            cursor: 'pointer'
+        }} onClick={toggleMute}>
+            <video
+                ref={videoRef}
+                src={src}
+                poster={thumbnailSrc}
+                autoPlay
+                loop
+                muted={isMuted}
+                playsInline
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    aspectRatio: '1/1'
+                }}
+            />
+
+            {/* Mute/Unmute Overlay */}
+            <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                background: 'rgba(0, 0, 0, 0.5)',
+                borderRadius: '50%',
+                width: '48px',
+                height: '48px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: isMuted ? 1 : 0,
+                transition: 'opacity 0.3s',
+                pointerEvents: 'none'
+            }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <line x1="23" y1="9" x2="17" y2="15" stroke="white" strokeWidth="2"></line>
+                    <line x1="17" y1="9" x2="23" y2="15" stroke="white" strokeWidth="2"></line>
+                </svg>
+            </div>
+
         </div>
     );
 }
@@ -429,6 +531,7 @@ function MessageItem({ msg, currentUser, chatInfo, chatId, initiateReply, initia
             {/* Content Types */}
             {msg.type === 'image' && <img src={msg.fileURL} alt="attachment" loading="lazy" onClick={() => window.open(msg.fileURL, '_blank')} />}
             {msg.type === 'audio' && <AudioPlayer src={msg.fileURL} />}
+            {msg.type === 'video' && <VideoPlayer src={msg.videoURL} thumbnailSrc={msg.thumbnailURL} duration={msg.duration} />}
             {msg.type === 'text' && <div>{renderText(msg.text) || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>(No content)</span>}</div>}
             {msg.type === 'file' && (
                 <a href={msg.fileURL} target="_blank" className="file-attachment">
