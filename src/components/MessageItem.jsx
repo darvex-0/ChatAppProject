@@ -86,8 +86,8 @@ function AudioPlayer({ src }) {
     );
 }
 
-// Helper component for video messages with circular bubble UI
-function VideoPlayer({ src, thumbnailSrc, duration }) {
+// Helper component for video messages with circular or rectangular UI
+function VideoPlayer({ src, thumbnailSrc, duration, isCircular = false, startTime, endTime }) {
     const videoRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isMuted, setIsMuted] = useState(true);
@@ -135,28 +135,32 @@ function VideoPlayer({ src, thumbnailSrc, duration }) {
     return (
         <div style={{
             position: 'relative',
-            width: '200px',
-            height: '200px',
+            width: isCircular ? '200px' : '100%',
+            maxWidth: isCircular ? '200px' : '300px',
+            height: isCircular ? '200px' : 'auto',
+            aspectRatio: isCircular ? '1/1' : 'auto', // Aspect ratio mainly for circular
             marginTop: '0.5rem',
-            borderRadius: '50%',
+            borderRadius: isCircular ? '50%' : '12px',
             overflow: 'hidden',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            backgroundColor: 'black' // Background for rectangular videos
         }} onClick={toggleMute}>
             <video
                 ref={videoRef}
-                src={src}
+                src={(startTime !== undefined && endTime !== undefined) ? `${src}#t=${startTime},${endTime}` : src}
                 poster={thumbnailSrc}
-                autoPlay
-                loop
-                muted={isMuted}
+                autoPlay={isCircular} // Only autoplay circular notes
+                controls={!isCircular} // Show controls for normal videos
+                loop={isCircular} // Loop circular notes
+                muted={isCircular ? isMuted : false} // Auto-mute circular, normal video has sound
                 playsInline
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
                 style={{
                     width: '100%',
                     height: '100%',
-                    objectFit: 'cover',
-                    aspectRatio: '1/1'
+                    objectFit: isCircular ? 'cover' : 'contain', // Contain for normal videos to show full content
+                    aspectRatio: isCircular ? '1/1' : 'auto'
                 }}
             />
 
@@ -531,7 +535,16 @@ function MessageItem({ msg, currentUser, chatInfo, chatId, initiateReply, initia
             {/* Content Types */}
             {msg.type === 'image' && <img src={msg.fileURL} alt="attachment" loading="lazy" onClick={() => window.open(msg.fileURL, '_blank')} />}
             {msg.type === 'audio' && <AudioPlayer src={msg.fileURL} />}
-            {msg.type === 'video' && <VideoPlayer src={msg.videoURL} thumbnailSrc={msg.thumbnailURL} duration={msg.duration} />}
+            {(msg.type === 'video' || msg.type === 'video_note') && (
+                <VideoPlayer
+                    src={msg.videoURL || msg.fileURL}
+                    thumbnailSrc={msg.thumbnailURL}
+                    duration={msg.duration}
+                    isCircular={msg.type === 'video_note'}
+                    startTime={msg.startTime}
+                    endTime={msg.endTime}
+                />
+            )}
             {msg.type === 'text' && <div>{renderText(msg.text) || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>(No content)</span>}</div>}
             {msg.type === 'file' && (
                 <a href={msg.fileURL} target="_blank" className="file-attachment">

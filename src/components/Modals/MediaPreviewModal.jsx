@@ -469,6 +469,7 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
                             onCropChange={setCrop}
                             onZoomChange={setZoom}
                             onCropComplete={onCropComplete}
+                            objectFit="contain"
                         />
                     </div>
                 ) : isImage ? (

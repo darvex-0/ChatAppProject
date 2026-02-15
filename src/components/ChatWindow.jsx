@@ -12,6 +12,7 @@ import WallpaperModal from './Modals/WallpaperModal';
 import ForwardModal from './Modals/ForwardModal';
 import MediaPreviewModal from './Modals/MediaPreviewModal';
 import VideoRecorder from './VideoRecorder';
+import MediaCamera from './MediaCamera';
 import MessageItem from './MessageItem';
 import { Virtuoso } from 'react-virtuoso';
 import imageCompression from 'browser-image-compression';
@@ -92,6 +93,7 @@ export default function ChatWindow() {
 
     // Video Recorder State
     const [showVideoRecorder, setShowVideoRecorder] = useState(false);
+    const [showMediaCamera, setShowMediaCamera] = useState(false);
 
     const typingTimeoutRef = useRef(null);
     const inputRef = useRef(null);
@@ -657,7 +659,7 @@ export default function ChatWindow() {
                 sender: currentUser.uid,
                 senderName: currentUser.displayName || "User",
                 timestamp: serverTimestamp(),
-                type: 'video',
+                type: 'video_note',
                 videoURL,
                 thumbnailURL,
                 duration,
@@ -678,6 +680,12 @@ export default function ChatWindow() {
             console.error("Error sending video:", e);
             showAlert("Failed to send video message");
         }
+    };
+
+    // Camera Capture Handler -> Opens Preview Modal
+    const handleCameraCapture = (file) => {
+        setShowMediaCamera(false);
+        setPreviewFile(file);
     };
 
     // --- Other Actions ---
@@ -1090,7 +1098,7 @@ export default function ChatWindow() {
     };
 
     // Actual file upload logic (called after preview confirmation)
-    const uploadFile = async (file, caption = "") => {
+    const uploadFile = async (file, caption = "", metadata = {}) => {
         // Image Compression Logic (skip GIFs to preserve animation)
         const isGif = file.type === 'image/gif';
         if (file.type.startsWith('image/') && !isGif) {
@@ -1146,7 +1154,8 @@ export default function ChatWindow() {
                                 type: isImage ? 'image' : isVideo ? 'video' : 'file',
                                 fileURL: downloadURL,
                                 fileName: file.name,
-                                status: 'sent'
+                                status: 'sent',
+                                ...metadata // Spread trim/crop metadata
                             };
                             // Add caption if provided
                             if (caption && caption.trim()) {
@@ -1186,9 +1195,9 @@ export default function ChatWindow() {
     };
 
     // Handle media preview send
-    const handleMediaPreviewSend = async (file, caption) => {
+    const handleMediaPreviewSend = async (file, caption, metadata) => {
         setPreviewFile(null);
-        await uploadFile(file, caption);
+        await uploadFile(file, caption, metadata);
     };
 
     // Cancel Upload Function
@@ -1752,6 +1761,9 @@ export default function ChatWindow() {
                         <button onClick={() => fileInputRef.current?.click()} className="icon-btn" title="Attach File" style={{ width: 'auto', height: 'auto', border: 'none', background: 'transparent', padding: 0 }}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                         </button>
+                        <button onClick={() => setShowMediaCamera(true)} className="icon-btn" title="Open Camera" style={{ width: 'auto', height: 'auto', border: 'none', background: 'transparent', padding: 0 }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                        </button>
                         <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} />
 
                         {/* Scheduled Messages Toggle */}
@@ -2227,6 +2239,14 @@ export default function ChatWindow() {
                 <VideoRecorder
                     onClose={() => setShowVideoRecorder(false)}
                     onSend={sendVideoMessage}
+                />
+            )}
+
+            {/* In-App Media Camera */}
+            {showMediaCamera && (
+                <MediaCamera
+                    onClose={() => setShowMediaCamera(false)}
+                    onCapture={handleCameraCapture}
                 />
             )}
         </div>

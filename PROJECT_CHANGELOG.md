@@ -2,6 +2,29 @@
 
 # Project Changelog
 
+## Version 2.27 - Media Camera & Video Notes 📸
+**Date:** 15th February 2026
+
+**New Features:**
+- **In-App Media Camera**: Capture photos and videos directly within the app without leaving the chat.
+  - **Dual Mode**: Tap to take a photo, hold to record a video.
+  - **Camera Switching**: Toggle between front and back cameras.
+  - **Flash Support**: Toggle flash on supported devices.
+- **Instant Video Notes**: Send quick, circular video messages (similar to WhatsApp/Telegram).
+  - **Dedicated Button**: Use the camcorder icon next to the mic for instant video notes.
+  - **Circular UI**: Distinguishes quick notes from standard video attachments.
+- **Media Editing Tools**:
+  - **Image Cropping**: Crop/Rotate images before sending.
+  - **Video Trimming**: Trim the start/end of videos with a precision slider.
+  - **Filters**: Apply filters to images (e.g., B&W, Vivid, Warm) before sending.
+
+**Bug Fixes:**
+- Fixed camera stream cleanup issue (camera staying on after capture).
+- Fixed auto-crop tool zooming in by default.
+- Resolved preview modal trigger issues for camera captures.
+
+---
+
 ## Version 2.26 - Instant Video Messages 📹
 **Date:** 14th February 2026
 
