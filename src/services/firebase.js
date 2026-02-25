@@ -4,6 +4,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { getStorage } from "firebase/storage";
 import { getDatabase } from "firebase/database";
 import { getMessaging } from "firebase/messaging";
+import { getFunctions } from "firebase/functions";
 
 const firebaseConfig = {
     apiKey: "AIzaSyC0N-K5E7pfOs1wPYuSVIZ3bvUzSNA4qcY",
@@ -25,6 +26,7 @@ export const db = initializeFirestore(app, {
 });
 export const storage = getStorage(app);
 export const rtdb = getDatabase(app);
+export const cloudFunctions = getFunctions(app);
 
 let messagingInstance = null;
 try {

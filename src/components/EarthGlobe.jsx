@@ -53,7 +53,7 @@ void main() {
     float gridLine = step(0.9, gridFract.x) + step(0.9, gridFract.y);
     gridLine = clamp(gridLine, 0.0, 1.0);
 
-    // Dots pattern
+    // Dots pattern - RESTORED
     float dist = distance(gridFract, vec2(0.5));
     float dotShape = 1.0 - smoothstep(0.3, 0.35, dist);
     
@@ -66,9 +66,9 @@ void main() {
     // --- COLOR PALETTE ---
     // Ocean: Dark Blue/Purple
     vec3 oceanColor = vec3(0.02, 0.04, 0.15); 
-    // Land: Bright Cyan/Blue/Purple
-    vec3 landColorBase = vec3(0.2, 0.5, 1.0);
-    vec3 landColorHigh = vec3(0.6, 0.3, 1.0);
+    // Land: Bright Cyan/Blue (Uniform, Clean)
+    vec3 landColorBase = vec3(0.0, 0.4, 0.8);
+    vec3 landColorHigh = vec3(0.2, 0.7, 1.0);
     
     // Pulse animation
     float pulse = sin(vUv.x * 12.0 - uTime * 1.5) * 0.5 + 0.5;
@@ -89,9 +89,10 @@ void main() {
     finalColor += vec3(0.1, 0.2, 0.5) * gridLine * 0.15;
     finalAlpha += gridLine * 0.1;
 
-    // Add Land
+    // Add Land (WITH DOT PATTERN)
     if (isLand > 0.1) {
-         float mixVal = isLand * dotShape;
+         float mixVal = isLand * dotShape; // Restored dotShape
+         
          finalColor = mix(finalColor, landColor, mixVal);
          // Make land glowing
          finalColor += landColor * mixVal * 0.5;

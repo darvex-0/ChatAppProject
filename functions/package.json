@@ -13,6 +13,7 @@
   },
   "main": "index.js",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "cheerio": "^1.2.0",
     "firebase-admin": "^12.1.1",
     "firebase-functions": "^5.0.1"

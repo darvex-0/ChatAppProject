@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
-import { db, storage } from '../services/firebase';
+import { db, storage, cloudFunctions } from '../services/firebase';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, setDoc, deleteDoc, deleteField, increment, limitToLast, Timestamp, writeBatch } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
+import { httpsCallable } from 'firebase/functions';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import { useCall } from '../context/CallContext';
@@ -14,6 +15,7 @@ import MediaPreviewModal from './Modals/MediaPreviewModal';
 import VideoRecorder from './VideoRecorder';
 import MediaCamera from './MediaCamera';
 import MessageItem from './MessageItem';
+import SmartReplies from './SmartReplies';
 import { Virtuoso } from 'react-virtuoso';
 import imageCompression from 'browser-image-compression';
 import EmojiPicker from 'emoji-picker-react';
@@ -95,6 +97,12 @@ export default function ChatWindow() {
     const [showVideoRecorder, setShowVideoRecorder] = useState(false);
     const [showMediaCamera, setShowMediaCamera] = useState(false);
 
+    // Smart Replies State
+    const [smartReplies, setSmartReplies] = useState([]);
+    const [isLoadingReplies, setIsLoadingReplies] = useState(false);
+    const smartReplyDebounceRef = useRef(null);
+    const smartReplyRequestIdRef = useRef(0); // Stale response protection
+
     const typingTimeoutRef = useRef(null);
     const inputRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -135,6 +143,10 @@ export default function ChatWindow() {
         setInputText("");
         setDeleteMsgId(null);
         setChatInfo(null); // Clear chat info to prevent stale data
+        setSmartReplies([]); // Clear smart replies
+        setIsLoadingReplies(false);
+        if (smartReplyDebounceRef.current) clearTimeout(smartReplyDebounceRef.current);
+        smartReplyRequestIdRef.current += 1; // Invalidate in-flight requests
         // ...
     }, [chatId]);
 
@@ -437,6 +449,104 @@ export default function ChatWindow() {
             }
         }
     }, [messages, currentUser.uid]);
+
+    // --- Smart Replies Logic (Gemini AI via Cloud Function) ---
+    useEffect(() => {
+        if (!messages.length || !currentUser) return;
+
+        const lastMsg = messages[messages.length - 1];
+
+        // Only show suggestions for incoming text messages when input is empty
+        if (
+            lastMsg.sender === currentUser.uid ||
+            lastMsg.type !== 'text' ||
+            !lastMsg.text ||
+            lastMsg.type === 'system' ||
+            lastMsg.type === 'call_event' ||
+            inputText.trim().length > 0
+        ) {
+            setSmartReplies([]);
+            setIsLoadingReplies(false);
+            return;
+        }
+
+        // Debounce: 1500ms to handle message barrages
+        if (smartReplyDebounceRef.current) clearTimeout(smartReplyDebounceRef.current);
+
+        smartReplyRequestIdRef.current += 1;
+        const thisRequestId = smartReplyRequestIdRef.current;
+
+        setIsLoadingReplies(true);
+        setSmartReplies([]);
+
+        smartReplyDebounceRef.current = setTimeout(async () => {
+            try {
+                const chatContext = messages
+                    .filter(m => m.type === 'text' && m.text)
+                    .slice(-4, -1)
+                    .map(m => ({
+                        sender: m.sender === currentUser.uid ? 'You' : (m.senderName || 'User'),
+                        text: m.text
+                    }));
+
+                const generateFn = httpsCallable(cloudFunctions, 'generateSmartReplies');
+                const result = await generateFn({
+                    messageText: lastMsg.text,
+                    chatContext
+                });
+
+                if (thisRequestId !== smartReplyRequestIdRef.current) return;
+
+                if (result.data?.replies && Array.isArray(result.data.replies)) {
+                    setSmartReplies(result.data.replies);
+                }
+            } catch (error) {
+                console.error('Smart Replies Error:', error);
+            } finally {
+                if (thisRequestId === smartReplyRequestIdRef.current) {
+                    setIsLoadingReplies(false);
+                }
+            }
+        }, 1500);
+
+        return () => {
+            if (smartReplyDebounceRef.current) clearTimeout(smartReplyDebounceRef.current);
+        };
+    }, [messages, currentUser, inputText]);
+
+    // Handle smart reply chip click
+    const handleSmartReplyClick = async (replyText) => {
+        setSmartReplies([]);
+        setIsLoadingReplies(false);
+
+        try {
+            const msgData = {
+                text: replyText,
+                sender: currentUser.uid,
+                senderName: currentUser.displayName || "User",
+                timestamp: serverTimestamp(),
+                type: "text",
+                status: "sent"
+            };
+            if (replyTo) {
+                msgData.replyTo = replyTo;
+                setReplyTo(null);
+            }
+            await addDoc(collection(db, "chats", chatId, "messages"), msgData);
+
+            const updates = { lastMessage: replyText, lastUpdate: serverTimestamp() };
+            if (chatInfo?.members) {
+                chatInfo.members.forEach(memberId => {
+                    if (memberId !== currentUser.uid) {
+                        updates[`unreadCounts.${memberId}`] = increment(1);
+                    }
+                });
+            }
+            await updateDoc(doc(db, "chats", chatId), updates);
+        } catch (err) {
+            console.error('Smart Reply send error:', err);
+        }
+    };
 
     // Load More Function
     const loadMoreMessages = () => {
@@ -1642,6 +1752,15 @@ export default function ChatWindow() {
             </div>
 
             <div id="typingIndicator">{typingUser && <span>{typingUser}</span>}</div>
+
+            {/* Smart Replies */}
+            {(smartReplies.length > 0 || isLoadingReplies) && !isRecording && !voicePreviewUrl && !editMsg && (
+                <SmartReplies
+                    replies={smartReplies}
+                    onSelect={handleSmartReplyClick}
+                    isLoading={isLoadingReplies}
+                />
+            )}
 
             {/* Input Area - With Voice Logic */}
             <div id="input-area" style={{ position: 'relative', zIndex: 60 }}>

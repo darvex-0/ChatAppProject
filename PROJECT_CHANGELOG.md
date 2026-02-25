@@ -2,6 +2,17 @@
 
 # Project Changelog
 
+## Version 2.28 - AI Smart Replies (Gemini) 🤖
+**Date:** 25th February 2026
+
+**New Features & Fixes:**
+- **Reliable Smart Replies**: Fully restored AI-generated smart replies using the Gemini API.
+  - **Gemini 2.5 Flash Lite**: Switched to the efficient, non-thinking `gemini-2.5-flash-lite` model for instant, reliable JSON responses.
+  - **Robust Parsing**: Improved JSON extraction logic handles markdown blocks and preamble text gracefully.
+  - **Cold Start Resilience**: Increased Cloud Function timeouts to ensure completion.
+  - **Security**: Secured API keys using Firebase Secret Manager.
+
+---
 ## Version 2.27 - Media Camera & Video Notes 📸
 **Date:** 15th February 2026
 

@@ -417,6 +417,98 @@ exports.onCallCreated = functions.firestore.onDocumentCreated("calls/{callId}", 
   }
 });
 
+// --- Function 7: generateSmartReplies (AI Smart Replies) ---
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { GoogleGenerativeAI, SchemaType } = require("@google/generative-ai");
+const { defineSecret } = require("firebase-functions/params");
+
+const geminiApiKey = defineSecret("GEMINI_API_KEY");
+
+exports.generateSmartReplies = onCall(
+  { secrets: [geminiApiKey], timeoutSeconds: 30, maxInstances: 10 },
+  async (request) => {
+    // 1. Auth check
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "User must be logged in.");
+    }
+
+    const { messageText, chatContext } = request.data;
+
+    // 2. Input validation
+    if (!messageText || typeof messageText !== "string" || messageText.trim().length === 0) {
+      throw new HttpsError("invalid-argument", "messageText is required.");
+    }
+
+    // 3. Truncate to avoid excessive token usage
+    const truncatedText = messageText.slice(0, 300);
+    const truncatedContext = (chatContext || [])
+      .slice(-3)
+      .map(m => `${m.sender}: ${(m.text || "").slice(0, 100)}`)
+      .join("\n");
+
+    try {
+      const genAI = new GoogleGenerativeAI(geminiApiKey.value());
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash-lite",
+        generationConfig: {
+          responseMimeType: "application/json",
+          temperature: 0.8,
+          maxOutputTokens: 256,
+        },
+        systemInstruction: `You are a chat reply suggestion assistant. Given a received message and optional conversation context, respond ONLY with a JSON object in this exact format: {"replies": ["reply1", "reply2", "reply3"]}. Rules: generate exactly 3 short reply suggestions (2-8 words each). Vary the tone: one agreeable, one asking a question, one casual. Never repeat the original message. Return ONLY the JSON object, nothing else.`,
+      });
+
+      let prompt = `Last received message: "${truncatedText}"`;
+      if (truncatedContext) {
+        prompt = `Recent conversation:\n${truncatedContext}\n\n${prompt}`;
+      }
+
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text();
+      logger.info("Gemini raw response:", responseText);
+
+      // Robust JSON extraction
+      let parsed;
+      // Step 1: Strip markdown code blocks if Gemini added them
+      let cleanText = responseText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+
+      try {
+        parsed = JSON.parse(cleanText);
+      } catch (parseErr) {
+        // Step 2: Extract JSON object from within preamble text
+        const jsonMatch = cleanText.match(/\{[\s\S]*"replies"\s*:\s*\[[\s\S]*\]\s*\}/);
+        if (jsonMatch) {
+          try {
+            parsed = JSON.parse(jsonMatch[0]);
+          } catch (e2) {
+            logger.warn("Second parse failed:", jsonMatch[0]);
+            return { replies: ["Sounds good!", "Tell me more", "Got it 👍"] };
+          }
+        } else {
+          logger.warn("Could not extract JSON from response:", responseText);
+          return { replies: ["Sounds good!", "Tell me more", "Got it 👍"] };
+        }
+      }
+
+      // Validate shape
+      if (!parsed.replies || !Array.isArray(parsed.replies) || parsed.replies.length < 3) {
+        logger.warn("Unexpected Gemini response shape:", parsed);
+        return { replies: ["Sounds good!", "Tell me more", "Got it 👍"] };
+      }
+
+      return { replies: parsed.replies.slice(0, 3) };
+
+    } catch (error) {
+      logger.error("Smart Replies Error:", error.message || error);
+      if (error.response) {
+        logger.error("Gemini Error Response:", JSON.stringify(error.response));
+      }
+      // Return sensible fallbacks instead of crashing
+      return { replies: ["Sounds good!", "Tell me more", "Got it 👍"] };
+    }
+  }
+);
+
 // --- Function 6: checkScheduledMessages (Cron Job) ---
 // Checks for pending scheduled messages every minute
 const { onSchedule } = require("firebase-functions/v2/scheduler");
