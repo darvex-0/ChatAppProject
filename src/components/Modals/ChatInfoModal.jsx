@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 
 import AddMemberModal from './AddMemberModal';
 import MediaGalleryModal from './MediaGalleryModal';
+import ChatSummaryModal from './ChatSummaryModal';
 
 export default function ChatInfoModal({ chatId, onClose }) {
     const { currentUser } = useAuth();
@@ -15,6 +16,7 @@ export default function ChatInfoModal({ chatId, onClose }) {
     const [loading, setLoading] = useState(true);
     const [showAddMember, setShowAddMember] = useState(false);
     const [showMedia, setShowMedia] = useState(false);
+    const [showSummary, setShowSummary] = useState(false);
 
     useEffect(() => {
         if (!chatId) return;
@@ -298,6 +300,12 @@ export default function ChatInfoModal({ chatId, onClose }) {
                             📷 View Media
                         </button>
                         <button
+                            onClick={() => setShowSummary(true)}
+                            style={{ width: '100%', padding: '0.875rem', background: 'rgba(99, 102, 241, 0.15)', color: '#c7d2fe', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '8px', fontSize: '1rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                        >
+                            📑 Summarize Chat <span style={{ fontSize: '0.7rem', background: 'rgba(99, 102, 241, 0.3)', padding: '2px 6px', borderRadius: '4px', fontWeight: 500 }}>AI</span>
+                        </button>
+                        <button
                             onClick={onClose}
                             style={{ width: '100%', padding: '0.875rem', background: 'transparent', color: 'var(--app-text-muted)', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '1rem', fontWeight: 600, cursor: 'pointer' }}
                         >
@@ -319,6 +327,13 @@ export default function ChatInfoModal({ chatId, onClose }) {
                 <MediaGalleryModal
                     chatId={chatId}
                     onClose={() => setShowMedia(false)}
+                />
+            )}
+            {showSummary && (
+                <ChatSummaryModal
+                    chatId={chatId}
+                    chatName={chatName}
+                    onClose={() => setShowSummary(false)}
                 />
             )}
         </>

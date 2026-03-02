@@ -2,6 +2,25 @@
 
 # Project Changelog
 
+## Version 2.29 - Local AI Engine (Ollama + FastAPI) 🧠
+**Date:** 2nd March 2026
+
+**New Features:**
+- **Local AI Smart Replies**: Replaced Gemini Cloud Function with a local Ollama-powered backend.
+  - **Zero Cost**: AI runs on your GPU (RTX 3050) via `qwen2.5:3b` — no API keys or cloud bills.
+  - **Privacy**: Chat data never leaves your machine.
+- **AI Message Rephrase (✨)**: New sparkle button next to send — rephrases messy/slang drafts into professional, polished messages.
+- **AI Chat Summarizer (📑)**: "Summarize Chat" button in Chat Info modal — generates a 2-3 sentence AI summary of the last 50 messages.
+- **FastAPI Backend**: Dedicated Python server with 3 endpoints (`/api/smart-reply`, `/api/rephrase`, `/api/summarize`).
+- **Fault-Tolerant UI**: AI features gracefully degrade when the local server isn't running.
+
+**Technical:**
+- `ConnectHubBackend/server.py` — FastAPI server with CORS + Ollama integration
+- `src/services/localAI.js` — API helper module with error handling
+- `src/components/Modals/ChatSummaryModal.jsx` — Self-fetching summary modal
+
+---
+
 ## Version 2.28 - AI Smart Replies (Gemini) 🤖
 **Date:** 25th February 2026
 
