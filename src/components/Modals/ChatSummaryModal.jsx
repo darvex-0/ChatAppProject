@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/firebase';
 import { collection, query, orderBy, getDocs, limitToLast } from 'firebase/firestore';
-import { fetchSummary } from '../../services/localAI';
+import { fetchSummary } from '../../services/aiService';
 
 export default function ChatSummaryModal({ chatId, chatName, onClose }) {
     const [summary, setSummary] = useState(null);

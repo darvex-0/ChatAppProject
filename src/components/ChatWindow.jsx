@@ -5,7 +5,7 @@ import { db, storage, cloudFunctions } from '../services/firebase';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc, setDoc, deleteDoc, deleteField, increment, limitToLast, Timestamp, writeBatch } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
-import { fetchSmartReplies, fetchRephrase } from '../services/localAI';
+import { fetchSmartReplies, fetchRephrase } from '../services/aiService';
 import PollCreator from './Modals/PollCreator';
 import MentionSuggestions from './MentionSuggestions';
 import { useAuth } from '../context/AuthContext';

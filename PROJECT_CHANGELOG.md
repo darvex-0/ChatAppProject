@@ -13,6 +13,10 @@
   - Integrated rich media editing (crop, filter, trim, caption) directly into story uploads.
   - Owners can see who viewed their stories and delete them at any time.
 - **Improved Media Cropping**: Swapped basic crop tool for `react-image-crop`, allowing freeform, draggable resizing of images before uploading to chats, stories, or profile pictures.
+- **Robust AI Fallback System**: Smart Replies now have 3 layers of reliability:
+    1.  **Local AI (Ollama)**: Default for cost-free privacy.
+    2.  **Google Gemini (Cloud)**: Auto-fallback if the local server is off.
+    3.  **Static Engine**: Final pattern-matching insurance for offline use.
 - **Polls in Chats** (Preview): Infrastructure laid for creating and voting on polls (in progress).
 - **User Mentions** (Preview): Infrastructure laid for @mentioning users in group chats (in progress).
 
