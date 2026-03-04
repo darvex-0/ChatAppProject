@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import Cropper from 'react-easy-crop';
+import ReactCrop from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 import getCroppedImg from '../../utils/cropImage';
 
 // Preset filters with CSS filter values and preview thumbnails
@@ -22,9 +23,9 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
 
     // Cropper state
     const [showCropper, setShowCropper] = useState(false);
-    const [crop, setCrop] = useState({ x: 0, y: 0 });
-    const [zoom, setZoom] = useState(1);
-    const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+    const [crop, setCrop] = useState({ unit: '%', width: 80, height: 80, x: 10, y: 10 });
+    const [completedCrop, setCompletedCrop] = useState(null);
+    const imgRef = useRef(null);
     const [editedFile, setEditedFile] = useState(null);
 
     // Filter state
@@ -185,9 +186,7 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
         setCurrentTime(newTime);
     };
 
-    const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
-        setCroppedAreaPixels(croppedAreaPixels);
-    }, []);
+    // removed onCropComplete for react-easy-crop
 
     // Apply filter to image via canvas
     const applyFilterToImage = async (imageUrl, filterValue) => {
@@ -211,13 +210,28 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
     };
 
     const applyCrop = async () => {
+        if (!completedCrop || !imgRef.current) {
+            setShowCropper(false);
+            return;
+        }
+
         try {
-            const croppedBlob = await getCroppedImg(previewUrl, croppedAreaPixels);
+            const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
+            const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
+
+            const pixelCrop = {
+                x: completedCrop.x * scaleX,
+                y: completedCrop.y * scaleY,
+                width: completedCrop.width * scaleX,
+                height: completedCrop.height * scaleY
+            };
+
+            const croppedBlob = await getCroppedImg(previewUrl, pixelCrop);
             const croppedFile = new File([croppedBlob], file.name, { type: 'image/jpeg' });
             setEditedFile(croppedFile);
             setShowCropper(false);
-            setCrop({ x: 0, y: 0 });
-            setZoom(1);
+            setCrop({ unit: '%', width: 80, height: 80, x: 10, y: 10 });
+            setCompletedCrop(null);
         } catch (e) {
             console.error("Crop error:", e);
         }
@@ -460,17 +474,19 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
             {/* Preview Area */}
             <div style={styles.previewArea}>
                 {showCropper ? (
-                    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                        <Cropper
-                            image={previewUrl}
+                    <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <ReactCrop
                             crop={crop}
-                            zoom={zoom}
-                            aspect={undefined}
-                            onCropChange={setCrop}
-                            onZoomChange={setZoom}
-                            onCropComplete={onCropComplete}
-                            objectFit="contain"
-                        />
+                            onChange={c => setCrop(c)}
+                            onComplete={c => setCompletedCrop(c)}
+                        >
+                            <img
+                                ref={imgRef}
+                                src={previewUrl}
+                                style={{ maxHeight: '60vh', maxWidth: '100%', objectFit: 'contain' }}
+                                alt="Crop Preview"
+                            />
+                        </ReactCrop>
                     </div>
                 ) : isImage ? (
                     <img
@@ -760,20 +776,7 @@ export default function MediaPreviewModal({ file, onSend, onCancel }) {
                     borderTop: '1px solid var(--border-color)',
                     background: 'var(--input-bg)'
                 }}>
-                    <span style={{ color: 'var(--app-text-muted)', fontSize: '13px' }}>Zoom</span>
-                    <input
-                        type="range"
-                        min={1}
-                        max={3}
-                        step={0.1}
-                        value={zoom}
-                        onChange={(e) => setZoom(Number(e.target.value))}
-                        style={{
-                            width: '100px',
-                            accentColor: 'var(--primary)',
-                            cursor: 'pointer'
-                        }}
-                    />
+                    <span style={{ color: 'var(--app-text-muted)', fontSize: '13px', flex: 1, textAlign: 'left' }}>Drag corners to crop</span>
                     <button
                         onClick={() => setShowCropper(false)}
                         style={{

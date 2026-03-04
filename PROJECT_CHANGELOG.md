@@ -2,6 +2,27 @@
 
 # Project Changelog
 
+## Version 2.30 - Stories, Polls, & Media Cropping 📸📊
+**Date:** 4th March 2026
+
+**New Features:**
+- **Status Updates / Stories**: WhatsApp-style 24h ephemeral stories.
+  - View friends' stories in a scrollable top bar.
+  - Create text stories with beautiful gradients or upload images/videos.
+  - Full-screen story viewer with auto-advancing progress bars and pause on hold.
+  - Integrated rich media editing (crop, filter, trim, caption) directly into story uploads.
+  - Owners can see who viewed their stories and delete them at any time.
+- **Improved Media Cropping**: Swapped basic crop tool for `react-image-crop`, allowing freeform, draggable resizing of images before uploading to chats, stories, or profile pictures.
+- **Polls in Chats** (Preview): Infrastructure laid for creating and voting on polls (in progress).
+- **User Mentions** (Preview): Infrastructure laid for @mentioning users in group chats (in progress).
+
+**Technical Details:**
+- `CreateStoryModal.jsx` and `StoryViewer.jsx` handle story creation and playback.
+- `MediaPreviewModal.jsx` and `SettingsModal.jsx` refactored to use `react-image-crop` for accurate dimension scaling.
+- Updated Firestore security rules to allow viewers to log their views anonymously but securely.
+
+---
+
 ## Version 2.29 - Local AI Engine (Ollama + FastAPI) 🧠
 **Date:** 2nd March 2026
 

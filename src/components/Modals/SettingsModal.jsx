@@ -5,7 +5,8 @@ import { db, storage } from '../../services/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { updateProfile } from 'firebase/auth';
-import Cropper from 'react-easy-crop';
+import ReactCrop from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 import getCroppedImg from '../../utils/cropImage';
 
 export default function SettingsModal({ onClose }) {
@@ -19,9 +20,9 @@ export default function SettingsModal({ onClose }) {
 
     // Cropper State
     const [imageSrc, setImageSrc] = useState(null);
-    const [crop, setCrop] = useState({ x: 0, y: 0 });
-    const [zoom, setZoom] = useState(1);
-    const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+    const [crop, setCrop] = useState({ unit: '%', width: 80, height: 80, x: 10, y: 10 });
+    const [completedCrop, setCompletedCrop] = useState(null);
+    const imgRef = useRef(null);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
     // Fetch user data from Firestore on mount
@@ -57,26 +58,31 @@ export default function SettingsModal({ onClose }) {
         }
     };
 
-    const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
-        setCroppedAreaPixels(croppedAreaPixels);
-    }, []);
-
     const cancelCrop = () => {
         setImageSrc(null);
-        setCrop({ x: 0, y: 0 });
-        setZoom(1);
-        setCroppedAreaPixels(null);
+        setCrop({ unit: '%', width: 80, height: 80, x: 10, y: 10 });
+        setCompletedCrop(null);
     };
 
     const uploadCroppedPhoto = async () => {
-        if (!imageSrc || !croppedAreaPixels) return;
+        if (!imageSrc || !completedCrop || !imgRef.current) return;
         setUploadingPhoto(true);
 
         try {
-            const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
-            const imgRef = ref(storage, `profile_pics/${currentUser.uid}`);
-            await uploadBytes(imgRef, croppedBlob);
-            const newPhotoURL = await getDownloadURL(imgRef);
+            const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
+            const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
+
+            const pixelCrop = {
+                x: completedCrop.x * scaleX,
+                y: completedCrop.y * scaleY,
+                width: completedCrop.width * scaleX,
+                height: completedCrop.height * scaleY
+            };
+
+            const croppedBlob = await getCroppedImg(imageSrc, pixelCrop);
+            const storageRef = ref(storage, `profile_pics/${currentUser.uid}`);
+            await uploadBytes(storageRef, croppedBlob);
+            const newPhotoURL = await getDownloadURL(storageRef);
 
             // Update Firestore
             await updateDoc(doc(db, "users", currentUser.uid), {
@@ -343,32 +349,21 @@ export default function SettingsModal({ onClose }) {
             {imageSrc && (
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'var(--modal-overlay)', zIndex: 1100, display: 'flex', flexDirection: 'column' }}>
                     {/* Cropper Area */}
-                    <div style={{ position: 'relative', flexGrow: 1 }}>
-                        <Cropper
-                            image={imageSrc}
+                    <div style={{ position: 'relative', flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '1rem' }}>
+                        <ReactCrop
                             crop={crop}
-                            zoom={zoom}
+                            onChange={c => setCrop(c)}
+                            onComplete={c => setCompletedCrop(c)}
                             aspect={1}
-                            cropShape="round"
-                            showGrid={false}
-                            onCropChange={setCrop}
-                            onZoomChange={setZoom}
-                            onCropComplete={onCropComplete}
-                        />
+                            circularCrop
+                        >
+                            <img ref={imgRef} src={imageSrc} style={{ maxHeight: '60vh', maxWidth: '100%', objectFit: 'contain' }} alt="Crop Preview" />
+                        </ReactCrop>
                     </div>
 
-                    {/* Zoom Slider */}
+                    {/* Drag hint */}
                     <div style={{ padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
-                        <span style={{ color: 'var(--app-text-muted)', fontSize: '0.8rem' }}>Zoom</span>
-                        <input
-                            type="range"
-                            min={1}
-                            max={3}
-                            step={0.1}
-                            value={zoom}
-                            onChange={(e) => setZoom(Number(e.target.value))}
-                            style={{ width: '150px', accentColor: 'var(--primary)' }}
-                        />
+                        <span style={{ color: 'var(--app-text-muted)', fontSize: '0.9rem' }}>Drag the corners to adjust the crop</span>
                     </div>
 
                     {/* Action Buttons */}

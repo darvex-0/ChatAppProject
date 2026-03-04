@@ -93,5 +93,19 @@ service cloud.firestore {
       // Delete: allow participants to delete their own logs
       allow delete: if request.auth != null && request.auth.uid in resource.data.participants;
     }
+    // 7. STORIES COLLECTION (24h ephemeral stories/status updates)
+    match /stories/{storyId} {
+      // Any authenticated user can read stories
+      allow read: if request.auth != null;
+      // Users can only create/delete their own stories
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      // For updates: author can do anything, OR viewers can add themselves to the viewers list
+      allow update: if request.auth != null && (
+        resource.data.uid == request.auth.uid || 
+        // Allow updating IF they are just adding themselves to the viewers array/info map
+        (request.resource.data.diff(resource.data).affectedKeys().hasAny(['viewers', 'viewersInfo']))
+      );
+    }
   }
 }

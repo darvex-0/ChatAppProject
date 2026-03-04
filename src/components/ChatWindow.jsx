@@ -6,6 +6,8 @@ import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, u
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
 import { fetchSmartReplies, fetchRephrase } from '../services/localAI';
+import PollCreator from './Modals/PollCreator';
+import MentionSuggestions from './MentionSuggestions';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import { useCall } from '../context/CallContext';
@@ -106,6 +108,13 @@ export default function ChatWindow() {
 
     // AI Rephrase State
     const [isRephrasing, setIsRephrasing] = useState(false);
+
+    // Poll State
+    const [showPollCreator, setShowPollCreator] = useState(false);
+
+    // Mention State
+    const [mentionState, setMentionState] = useState(null); // { query: string } | null
+    const [groupMembers, setGroupMembers] = useState([]); // [{ uid, name, photo }]
 
     const typingTimeoutRef = useRef(null);
     const inputRef = useRef(null);
@@ -798,9 +807,80 @@ export default function ChatWindow() {
         setPreviewFile(file);
     };
 
+    // Fetch group members for @mentions
+    useEffect(() => {
+        if (!chatInfo || chatInfo.type !== 'group' || !chatInfo.members) return;
+
+        const fetchMembers = async () => {
+            try {
+                const memberIds = chatInfo.members.filter(uid => uid !== currentUser.uid);
+                const promises = memberIds.map(uid =>
+                    getDoc(doc(db, 'users', uid)).then(snap => snap.exists() ? { uid, name: snap.data().name || snap.data().email?.split('@')[0] || 'User', photo: snap.data().photoURL || null } : null)
+                );
+                const members = (await Promise.all(promises)).filter(Boolean);
+                setGroupMembers(members);
+            } catch (e) {
+                console.error('Error fetching group members for mentions:', e);
+            }
+        };
+        fetchMembers();
+    }, [chatInfo, currentUser.uid]);
+
+    // Insert @mention into input
+    const insertMention = (member) => {
+        const cursorPos = inputRef.current?.selectionStart ?? inputText.length;
+        const textUpToCursor = inputText.slice(0, cursorPos);
+        const textAfterCursor = inputText.slice(cursorPos);
+        // Replace the @query with @Name
+        const newText = textUpToCursor.replace(/@(\w*)$/, `@${member.name} `) + textAfterCursor;
+        setInputText(newText);
+        setMentionState(null);
+        // Restore focus
+        setTimeout(() => inputRef.current?.focus(), 10);
+    };
+
+    // Send Poll
+    const sendPoll = async (pollData) => {
+        try {
+            const msgData = {
+                sender: currentUser.uid,
+                senderName: currentUser.displayName || 'User',
+                timestamp: serverTimestamp(),
+                type: 'poll',
+                status: 'sent',
+                pollData
+            };
+            await addDoc(collection(db, 'chats', chatId, 'messages'), msgData);
+            const updates = { lastMessage: '📊 Poll: ' + pollData.question, lastUpdate: serverTimestamp() };
+            if (chatInfo?.members) {
+                chatInfo.members.forEach(memberId => {
+                    if (memberId !== currentUser.uid) updates[`unreadCounts.${memberId}`] = increment(1);
+                });
+            }
+            await updateDoc(doc(db, 'chats', chatId), updates);
+        } catch (e) {
+            console.error('Error sending poll:', e);
+            showAlert('Failed to send poll.');
+        }
+    };
+
     // --- Other Actions ---
     const handleInputChange = (e) => {
-        setInputText(e.target.value);
+        const value = e.target.value;
+        setInputText(value);
+
+        // --- @Mention Detection ---
+        if (chatInfo?.type === 'group') {
+            const cursorPos = e.target.selectionStart;
+            const textUpToCursor = value.slice(0, cursorPos);
+            const atMatch = textUpToCursor.match(/@(\w*)$/);
+            if (atMatch) {
+                setMentionState({ query: atMatch[1] });
+            } else {
+                setMentionState(null);
+            }
+        }
+
         if (chatId) {
             // Debounce typing indicator writes to reduce Firestore costs
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -1918,6 +1998,26 @@ export default function ChatWindow() {
                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                         </button>
 
+                        {/* Poll Button */}
+                        <button
+                            onClick={() => setShowPollCreator(true)}
+                            className="icon-btn"
+                            title="Create Poll"
+                            style={{ width: 'auto', height: 'auto', border: 'none', background: 'transparent', padding: 0 }}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        </button>
+
+                        {/* Mention Suggestions */}
+                        {mentionState && groupMembers.length > 0 && (
+                            <MentionSuggestions
+                                members={groupMembers}
+                                query={mentionState.query}
+                                onSelect={insertMention}
+                                onClose={() => setMentionState(null)}
+                            />
+                        )}
+
                         <form onSubmit={sendMessage} style={{ flexGrow: 1, display: 'flex', gap: '0.75rem', alignItems: 'center', position: 'relative' }}>
 
                             {showEmojiPicker && ReactDOM.createPortal(
@@ -2424,6 +2524,14 @@ export default function ChatWindow() {
                     />
                 )
             }
+
+            {/* Poll Creator Modal */}
+            {showPollCreator && (
+                <PollCreator
+                    onClose={() => setShowPollCreator(false)}
+                    onSubmit={sendPoll}
+                />
+            )}
         </div >
     );
 }

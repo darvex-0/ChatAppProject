@@ -7,6 +7,7 @@ import { useUI } from '../context/UIContext';
 import { useCall } from '../context/CallContext';
 import CallLogItem from './CallLogItem';
 import NotesSection from './NotesSection';
+import StoriesBar from './StoriesBar';
 
 // Helper Component for Real-Time Online Status AND Profile Data
 function OnlineIndicator({ userId, onProfileUpdate }) {
@@ -446,6 +447,13 @@ export default function Sidebar() {
                         onBlur={(e) => e.target.style.borderColor = 'var(--border-color)'}
                     />
                 </div>
+
+                {/* Stories Bar - only on chats tab, not in archive view */}
+                {!showArchived && activeTab === 'chats' && (
+                    <StoriesBar
+                        friendIds={chats.filter(c => !c.isArchived && c.friendId).map(c => c.friendId)}
+                    />
+                )}
 
                 {/* PWA Install Button & Other Alerts */}
                 {!showArchived && activeTab === 'chats' && showInstallButton && (

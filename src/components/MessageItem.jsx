@@ -4,6 +4,7 @@ import EmojiPicker from 'emoji-picker-react';
 import { db } from '../services/firebase';
 import { collection, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore';
 import { useUI } from '../context/UIContext';
+import PollMessage from './PollMessage';
 
 // Helper component for audio messages with duration display
 function AudioPlayer({ src }) {
@@ -299,15 +300,25 @@ function MessageItem({ msg, currentUser, chatInfo, chatId, initiateReply, initia
     const reactionCounts = {};
     if (msg.reactions) Object.values(msg.reactions).forEach(e => reactionCounts[e] = (reactionCounts[e] || 0) + 1);
 
-    // Helper to highlight text
+    // Helper to highlight text and @mentions
     const renderText = (text) => {
-        if (!highlightText || !text) return text;
-        const parts = text.split(new RegExp(`(${highlightText})`, 'gi'));
-        return parts.map((part, i) =>
-            part.toLowerCase() === highlightText.toLowerCase()
-                ? <span key={i} className="highlight">{part}</span>
-                : part
-        );
+        if (!text) return null;
+        // Split by @mentions first, then by search highlight
+        const parts = text.split(/(@@?[\w]+)/g);
+        return parts.map((part, i) => {
+            if (part.startsWith('@') && part.length > 1) {
+                return <span key={i} className="mention-highlight">{part}</span>;
+            }
+            if (highlightText && part.toLowerCase().includes(highlightText.toLowerCase())) {
+                const sub = part.split(new RegExp(`(${highlightText})`, 'gi'));
+                return sub.map((s, j) =>
+                    s.toLowerCase() === highlightText.toLowerCase()
+                        ? <span key={`${i}-${j}`} className="highlight">{s}</span>
+                        : s
+                );
+            }
+            return part;
+        });
     };
 
     return (
@@ -546,6 +557,7 @@ function MessageItem({ msg, currentUser, chatInfo, chatId, initiateReply, initia
                 />
             )}
             {msg.type === 'text' && <div>{renderText(msg.text) || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>(No content)</span>}</div>}
+            {msg.type === 'poll' && <PollMessage msg={msg} chatId={chatId} />}
             {msg.type === 'file' && (
                 <a href={msg.fileURL} target="_blank" className="file-attachment">
                     <div className="file-attachment-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg></div>
@@ -659,6 +671,7 @@ export default React.memo(MessageItem, (prevProps, nextProps) => {
         JSON.stringify(prevProps.msg.reactions) === JSON.stringify(nextProps.msg.reactions) &&
         prevProps.msg.isPinned === nextProps.msg.isPinned &&
         prevProps.msg.isStarred === nextProps.msg.isStarred &&
-        prevProps.highlightText === nextProps.highlightText
+        prevProps.highlightText === nextProps.highlightText &&
+        JSON.stringify(prevProps.msg.pollData?.votes) === JSON.stringify(nextProps.msg.pollData?.votes)
     );
 });
