@@ -1,23 +1,21 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-/**
- * MentionSuggestions — shows a floating dropdown of members matching the current @query
- * Only shown in group chats when the user types @
- *
- * Props:
- *   members: [{ uid, name, photo }]
- *   query: string — text after '@'
- *   onSelect: (member) => void
- *   onClose: () => void
- */
-export default function MentionSuggestions({ members, query, onSelect, onClose }) {
+export default function MentionSuggestions({ members, query, onSelect, onClose, activeIndex = 0 }) {
     const ref = useRef(null);
 
-    const filtered = members.filter(m =>
+    // Filter members and add @AI as a special option
+    const filteredMembers = members.filter(m =>
         m.name?.toLowerCase().includes(query.toLowerCase())
-    ).slice(0, 6); // max 6 suggestions
+    );
 
-    // Close on click outside
+    // Add AI as the first option if it matches query or if query is empty after @
+    const showAI = "ai".includes(query.toLowerCase()) || query === "";
+
+    const allSuggestions = [
+        ...(showAI ? [{ uid: 'ai-assistant', name: 'AI', isAI: true }] : []),
+        ...filteredMembers
+    ].slice(0, 8);
+
     useEffect(() => {
         const handler = (e) => {
             if (ref.current && !ref.current.contains(e.target)) {
@@ -28,28 +26,50 @@ export default function MentionSuggestions({ members, query, onSelect, onClose }
         return () => document.removeEventListener('mousedown', handler);
     }, [onClose]);
 
-    if (filtered.length === 0) return null;
+    if (allSuggestions.length === 0) return null;
 
     return (
-        <div className="mention-dropdown" ref={ref}>
-            <div className="mention-dropdown-header">Mention</div>
-            {filtered.map(member => (
-                <button
-                    key={member.uid}
-                    className="mention-item"
-                    onClick={() => onSelect(member)}
-                    type="button"
-                >
-                    {member.photo ? (
-                        <img src={member.photo} className="mention-avatar" alt={member.name} />
-                    ) : (
-                        <div className="mention-avatar mention-avatar-placeholder">
-                            {(member.name || 'U')[0].toUpperCase()}
+        <div className="mention-dropdown glass-card" ref={ref}>
+            <div className="mention-dropdown-header">
+                <span>Mentions</span>
+                <span className="mention-hint">↑↓ to navigate</span>
+            </div>
+            <div className="mention-list">
+                {allSuggestions.map((item, i) => (
+                    <button
+                        key={item.uid}
+                        className={`mention-item ${i === activeIndex ? 'active' : ''} ${item.isAI ? 'ai-item' : ''}`}
+                        onClick={() => onSelect(item)}
+                        type="button"
+                    >
+                        <div className="mention-avatar-container">
+                            {item.isAI ? (
+                                <div className="mention-avatar ai-avatar">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" />
+                                        <path d="M12 6v6l4 2" />
+                                    </svg>
+                                </div>
+                            ) : item.photo ? (
+                                <img src={item.photo} className="mention-avatar" alt={item.name} />
+                            ) : (
+                                <div className="mention-avatar mention-avatar-placeholder">
+                                    {(item.name || 'U')[0].toUpperCase()}
+                                </div>
+                            )}
                         </div>
-                    )}
-                    <span className="mention-name">@{member.name}</span>
-                </button>
-            ))}
+                        <div className="mention-info">
+                            <span className="mention-name">
+                                {item.isAI ? 'AI Assistant' : item.name}
+                            </span>
+                            <span className="mention-handle">
+                                @{item.isAI ? 'ai' : item.name?.toLowerCase().replace(/\s+/g, '')}
+                            </span>
+                        </div>
+                        {item.isAI && <span className="ai-badge">Smart</span>}
+                    </button>
+                ))}
+            </div>
         </div>
     );
 }

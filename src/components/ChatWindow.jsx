@@ -115,6 +115,8 @@ export default function ChatWindow() {
     // Mention State
     const [mentionState, setMentionState] = useState(null); // { query: string } | null
     const [groupMembers, setGroupMembers] = useState([]); // [{ uid, name, photo }]
+    const [mentionIndex, setMentionIndex] = useState(0); // For keyboard navigation
+    const mentionMapRef = useRef({}); // Tracks { [handle]: uid } for profile lookup
 
     const typingTimeoutRef = useRef(null);
     const inputRef = useRef(null);
@@ -831,10 +833,19 @@ export default function ChatWindow() {
         const cursorPos = inputRef.current?.selectionStart ?? inputText.length;
         const textUpToCursor = inputText.slice(0, cursorPos);
         const textAfterCursor = inputText.slice(cursorPos);
+
+        const mentionName = member.isAI ? 'AI' : member.name.replace(/\s+/g, '');
         // Replace the @query with @Name
-        const newText = textUpToCursor.replace(/@(\w*)$/, `@${member.name} `) + textAfterCursor;
+        const newText = textUpToCursor.replace(/@([a-zA-Z0-9_ ]*)$/, `@${mentionName} `) + textAfterCursor;
         setInputText(newText);
         setMentionState(null);
+        setMentionIndex(0);
+
+        // Track handle → uid so we can look up the profile later
+        if (!member.isAI && member.uid) {
+            mentionMapRef.current = { ...mentionMapRef.current, [mentionName]: member.uid };
+        }
+
         // Restore focus
         setTimeout(() => inputRef.current?.focus(), 10);
     };
@@ -870,12 +881,13 @@ export default function ChatWindow() {
         setInputText(value);
 
         // --- @Mention Detection ---
-        if (chatInfo?.type === 'group') {
+        if (chatInfo?.type === 'group' || chatInfo?.type === 'direct') {
             const cursorPos = e.target.selectionStart;
             const textUpToCursor = value.slice(0, cursorPos);
-            const atMatch = textUpToCursor.match(/@(\w*)$/);
+            const atMatch = textUpToCursor.match(/@([a-zA-Z0-9_ ]*)$/);
             if (atMatch) {
                 setMentionState({ query: atMatch[1] });
+                setMentionIndex(0); // Reset index on new search
             } else {
                 setMentionState(null);
             }
@@ -1222,6 +1234,8 @@ export default function ChatWindow() {
         if (!inputText.trim()) return;
 
         const text = inputText;
+        const isAIMention = text.toLowerCase().includes('@ai');
+
         setInputText("");
         setDoc(doc(db, "chats", chatId, "typing", currentUser.uid), { typing: false }, { merge: true });
 
@@ -1234,11 +1248,16 @@ export default function ChatWindow() {
                 type: "text",
                 status: "sent"
             };
+            // Save handle → uid map so the receiver can look up profiles
+            if (Object.keys(mentionMapRef.current).length > 0) {
+                msgData.mentionMap = { ...mentionMapRef.current };
+                mentionMapRef.current = {}; // Reset after sending
+            }
             if (replyTo) {
                 msgData.replyTo = replyTo;
                 setReplyTo(null);
             }
-            await addDoc(collection(db, "chats", chatId, "messages"), msgData);
+            const sentMsgRef = await addDoc(collection(db, "chats", chatId, "messages"), msgData);
 
             // Update last message & Increment unread counts
             const updates = { lastMessage: text, lastUpdate: serverTimestamp() };
@@ -1250,6 +1269,32 @@ export default function ChatWindow() {
                 });
             }
             await updateDoc(doc(db, "chats", chatId), updates);
+
+            // Trigger AI if @AI was mentioned
+            if (isAIMention) {
+                // We simulate a small delay for "AI is typing"
+                setTimeout(async () => {
+                    try {
+                        // Use the existing fetchSmartReplies logic or similar
+                        // For a better experience, we can provide the full text as context
+                        const replies = await fetchSmartReplies(text, []);
+                        if (replies && replies.length > 0) {
+                            // Send the first AI reply as a new message
+                            await addDoc(collection(db, "chats", chatId, "messages"), {
+                                text: replies[0],
+                                sender: "ai-assistant",
+                                senderName: "AI Assistant",
+                                timestamp: serverTimestamp(),
+                                type: "text",
+                                status: "sent",
+                                replyTo: { id: sentMsgRef.id, text, senderName: currentUser.displayName || "User" }
+                            });
+                        }
+                    } catch (err) {
+                        console.error("AI Mention processing failed:", err);
+                    }
+                }, 1000);
+            }
         } catch (err) { console.error(err); }
     };
 
@@ -2009,12 +2054,13 @@ export default function ChatWindow() {
                         </button>
 
                         {/* Mention Suggestions */}
-                        {mentionState && groupMembers.length > 0 && (
+                        {mentionState && (
                             <MentionSuggestions
                                 members={groupMembers}
                                 query={mentionState.query}
                                 onSelect={insertMention}
                                 onClose={() => setMentionState(null)}
+                                activeIndex={mentionIndex}
                             />
                         )}
 
@@ -2139,6 +2185,32 @@ export default function ChatWindow() {
                                 ref={inputRef}
                                 value={inputText}
                                 onChange={handleInputChange}
+                                onKeyDown={(e) => {
+                                    if (mentionState) {
+                                        // Filter logic duplicated from component to decide navigation
+                                        const filteredMembers = groupMembers.filter(m =>
+                                            m.name?.toLowerCase().includes(mentionState.query.toLowerCase())
+                                        );
+                                        const showAI = "ai".includes(mentionState.query.toLowerCase()) || mentionState.query === "";
+                                        const allSuggestions = [
+                                            ...(showAI ? [{ uid: 'ai-assistant', name: 'AI', isAI: true }] : []),
+                                            ...filteredMembers
+                                        ].slice(0, 8);
+
+                                        if (e.key === 'ArrowDown') {
+                                            e.preventDefault();
+                                            setMentionIndex(prev => (prev + 1) % allSuggestions.length);
+                                        } else if (e.key === 'ArrowUp') {
+                                            e.preventDefault();
+                                            setMentionIndex(prev => (prev - 1 + allSuggestions.length) % allSuggestions.length);
+                                        } else if (e.key === 'Enter' && allSuggestions.length > 0) {
+                                            e.preventDefault();
+                                            insertMention(allSuggestions[mentionIndex]);
+                                        } else if (e.key === 'Escape') {
+                                            setMentionState(null);
+                                        }
+                                    }
+                                }}
                                 placeholder="Type your message..."
                                 autoComplete="off"
                             />
@@ -2528,6 +2600,7 @@ export default function ChatWindow() {
             {/* Poll Creator Modal */}
             {showPollCreator && (
                 <PollCreator
+                    chatId={chatId}
                     onClose={() => setShowPollCreator(false)}
                     onSubmit={sendPoll}
                 />

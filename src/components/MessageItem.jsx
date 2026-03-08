@@ -5,6 +5,7 @@ import { db } from '../services/firebase';
 import { collection, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore';
 import { useUI } from '../context/UIContext';
 import PollMessage from './PollMessage';
+import UserProfileModal from './Modals/UserProfileModal';
 
 // Helper component for audio messages with duration display
 function AudioPlayer({ src }) {
@@ -301,13 +302,31 @@ function MessageItem({ msg, currentUser, chatInfo, chatId, initiateReply, initia
     if (msg.reactions) Object.values(msg.reactions).forEach(e => reactionCounts[e] = (reactionCounts[e] || 0) + 1);
 
     // Helper to highlight text and @mentions
+    const [profileUser, setProfileUser] = useState(null); // { username, userId }
     const renderText = (text) => {
         if (!text) return null;
         // Split by @mentions first, then by search highlight
         const parts = text.split(/(@@?[\w]+)/g);
         return parts.map((part, i) => {
             if (part.startsWith('@') && part.length > 1) {
-                return <span key={i} className="mention-highlight">{part}</span>;
+                const isAI = part.toLowerCase() === '@ai';
+                return (
+                    <span
+                        key={i}
+                        className={`mention-highlight ${isAI ? 'ai-mention' : ''}`}
+                        title={isAI ? 'AI Assistant' : `View profile for ${part}`}
+                        style={{ cursor: isAI ? 'default' : 'pointer' }}
+                        onClick={isAI ? undefined : (e) => {
+                            e.stopPropagation();
+                            const handle = part.replace('@', '');
+                            // Try to resolve uid from mentionMap stored in the message
+                            const userId = msg.mentionMap?.[handle] || null;
+                            setProfileUser({ username: handle, userId });
+                        }}
+                    >
+                        {isAI ? '✨ ' : ''}{part}
+                    </span>
+                );
             }
             if (highlightText && part.toLowerCase().includes(highlightText.toLowerCase())) {
                 const sub = part.split(new RegExp(`(${highlightText})`, 'gi'));
@@ -322,343 +341,353 @@ function MessageItem({ msg, currentUser, chatInfo, chatId, initiateReply, initia
     };
 
     return (
-        <div className={`message ${isMe ? 'self' : ''}`} style={{ marginBottom: '10px', transition: 'background 0.3s' }} id={`msg-${msg.id}`}>
-            {/* Hover Menu */}
-            <div className="msg-options" style={{ alignItems: 'center' }}>
-                <span className="option-btn reply-action" title="Reply" onClick={() => initiateReply(msg)}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 10 4 15 9 20"></polyline><path d="M20 4v7a4 4 0 0 1-4 4H4"></path></svg>
-                </span>
-                <span className="option-btn forward-action" title="Forward" onClick={() => initiateForward(msg)}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 10 20 15 15 20"></polyline><path d="M4 4v7a4 4 0 0 0 4 4h12"></path></svg>
-                </span>
-                <span className="option-btn notes-action" title="Save to Notes" onClick={() => saveToNotes(msg)}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                </span>
-                <div className="separator"></div>
-                <span
-                    className="option-btn emoji-action"
-                    title="Add Reaction"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setEmojiPickerPos({ x: Math.min(window.innerWidth - 320, e.clientX), y: Math.min(window.innerHeight - 420, e.clientY) });
-                        setShowEmojiPicker(!showEmojiPicker);
-                    }}
-                >
-                    😊+
-                </span>
-                {showEmojiPicker && ReactDOM.createPortal(
-                    <>
-                        {/* Draggable Emoji Picker */}
-                        <div
-                            style={{
-                                position: 'fixed',
-                                top: emojiPickerPos.y,
-                                left: emojiPickerPos.x,
-                                zIndex: 999999,
-                                boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
-                                borderRadius: '12px',
-                                overflow: 'hidden',
-                                cursor: isDraggingEmoji ? 'grabbing' : 'default'
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            {/* Drag Handle */}
+        <React.Fragment>
+            <div className={`message ${isMe ? 'self' : ''}`} style={{ marginBottom: '10px', transition: 'background 0.3s' }} id={`msg-${msg.id}`}>
+                {/* Hover Menu */}
+                <div className="msg-options" style={{ alignItems: 'center' }}>
+                    <span className="option-btn reply-action" title="Reply" onClick={() => initiateReply(msg)}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 10 4 15 9 20"></polyline><path d="M20 4v7a4 4 0 0 1-4 4H4"></path></svg>
+                    </span>
+                    <span className="option-btn forward-action" title="Forward" onClick={() => initiateForward(msg)}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 10 20 15 15 20"></polyline><path d="M4 4v7a4 4 0 0 0 4 4h12"></path></svg>
+                    </span>
+                    <span className="option-btn notes-action" title="Save to Notes" onClick={() => saveToNotes(msg)}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    </span>
+                    <div className="separator"></div>
+                    <span
+                        className="option-btn emoji-action"
+                        title="Add Reaction"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setEmojiPickerPos({ x: Math.min(window.innerWidth - 320, e.clientX), y: Math.min(window.innerHeight - 420, e.clientY) });
+                            setShowEmojiPicker(!showEmojiPicker);
+                        }}
+                    >
+                        😊+
+                    </span>
+                    {showEmojiPicker && ReactDOM.createPortal(
+                        <>
+                            {/* Draggable Emoji Picker */}
                             <div
                                 style={{
-                                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                                    padding: '8px 12px',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    cursor: 'grab',
-                                    userSelect: 'none'
+                                    position: 'fixed',
+                                    top: emojiPickerPos.y,
+                                    left: emojiPickerPos.x,
+                                    zIndex: 999999,
+                                    boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
+                                    borderRadius: '12px',
+                                    overflow: 'hidden',
+                                    cursor: isDraggingEmoji ? 'grabbing' : 'default'
                                 }}
-                                onMouseDown={(e) => {
-                                    setIsDraggingEmoji(true);
-                                    emojiDragOffset.current = {
-                                        x: e.clientX - emojiPickerPos.x,
-                                        y: e.clientY - emojiPickerPos.y
-                                    };
-                                    const handleMouseMove = (ev) => {
-                                        setEmojiPickerPos({
-                                            x: Math.max(0, Math.min(window.innerWidth - 300, ev.clientX - emojiDragOffset.current.x)),
-                                            y: Math.max(0, Math.min(window.innerHeight - 400, ev.clientY - emojiDragOffset.current.y))
-                                        });
-                                    };
-                                    const handleMouseUp = () => {
-                                        setIsDraggingEmoji(false);
-                                        document.removeEventListener('mousemove', handleMouseMove);
-                                        document.removeEventListener('mouseup', handleMouseUp);
-                                    };
-                                    document.addEventListener('mousemove', handleMouseMove);
-                                    document.addEventListener('mouseup', handleMouseUp);
-                                }}
-                                onTouchStart={(e) => {
-                                    const touch = e.touches[0];
-                                    setIsDraggingEmoji(true);
-                                    emojiDragOffset.current = {
-                                        x: touch.clientX - emojiPickerPos.x,
-                                        y: touch.clientY - emojiPickerPos.y
-                                    };
-                                    const handleTouchMove = (ev) => {
-                                        const t = ev.touches[0];
-                                        setEmojiPickerPos({
-                                            x: Math.max(0, Math.min(window.innerWidth - 300, t.clientX - emojiDragOffset.current.x)),
-                                            y: Math.max(0, Math.min(window.innerHeight - 400, t.clientY - emojiDragOffset.current.y))
-                                        });
-                                    };
-                                    const handleTouchEnd = () => {
-                                        setIsDraggingEmoji(false);
-                                        document.removeEventListener('touchmove', handleTouchMove);
-                                        document.removeEventListener('touchend', handleTouchEnd);
-                                    };
-                                    document.addEventListener('touchmove', handleTouchMove, { passive: true });
-                                    document.addEventListener('touchend', handleTouchEnd);
-                                }}
+                                onClick={(e) => e.stopPropagation()}
                             >
-                                <span style={{ color: 'white', fontSize: '0.85rem', fontWeight: 500 }}>😃 React</span>
-                                <button
-                                    onClick={() => setShowEmojiPicker(false)}
-                                    style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1 }}
+                                {/* Drag Handle */}
+                                <div
+                                    style={{
+                                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                        padding: '8px 12px',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        cursor: 'grab',
+                                        userSelect: 'none'
+                                    }}
+                                    onMouseDown={(e) => {
+                                        setIsDraggingEmoji(true);
+                                        emojiDragOffset.current = {
+                                            x: e.clientX - emojiPickerPos.x,
+                                            y: e.clientY - emojiPickerPos.y
+                                        };
+                                        const handleMouseMove = (ev) => {
+                                            setEmojiPickerPos({
+                                                x: Math.max(0, Math.min(window.innerWidth - 300, ev.clientX - emojiDragOffset.current.x)),
+                                                y: Math.max(0, Math.min(window.innerHeight - 400, ev.clientY - emojiDragOffset.current.y))
+                                            });
+                                        };
+                                        const handleMouseUp = () => {
+                                            setIsDraggingEmoji(false);
+                                            document.removeEventListener('mousemove', handleMouseMove);
+                                            document.removeEventListener('mouseup', handleMouseUp);
+                                        };
+                                        document.addEventListener('mousemove', handleMouseMove);
+                                        document.addEventListener('mouseup', handleMouseUp);
+                                    }}
+                                    onTouchStart={(e) => {
+                                        const touch = e.touches[0];
+                                        setIsDraggingEmoji(true);
+                                        emojiDragOffset.current = {
+                                            x: touch.clientX - emojiPickerPos.x,
+                                            y: touch.clientY - emojiPickerPos.y
+                                        };
+                                        const handleTouchMove = (ev) => {
+                                            const t = ev.touches[0];
+                                            setEmojiPickerPos({
+                                                x: Math.max(0, Math.min(window.innerWidth - 300, t.clientX - emojiDragOffset.current.x)),
+                                                y: Math.max(0, Math.min(window.innerHeight - 400, t.clientY - emojiDragOffset.current.y))
+                                            });
+                                        };
+                                        const handleTouchEnd = () => {
+                                            setIsDraggingEmoji(false);
+                                            document.removeEventListener('touchmove', handleTouchMove);
+                                            document.removeEventListener('touchend', handleTouchEnd);
+                                        };
+                                        document.addEventListener('touchmove', handleTouchMove, { passive: true });
+                                        document.addEventListener('touchend', handleTouchEnd);
+                                    }}
                                 >
-                                    ×
-                                </button>
+                                    <span style={{ color: 'white', fontSize: '0.85rem', fontWeight: 500 }}>😃 React</span>
+                                    <button
+                                        onClick={() => setShowEmojiPicker(false)}
+                                        style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1 }}
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                                <EmojiPicker
+                                    theme="dark"
+                                    onEmojiClick={(emojiObject) => {
+                                        addReaction(msg.id, emojiObject.emoji);
+                                        setShowEmojiPicker(false);
+                                    }}
+                                    searchDisabled
+                                    skinTonesDisabled
+                                    height={350}
+                                    width={300}
+                                    previewConfig={{ showPreview: false }}
+                                />
                             </div>
-                            <EmojiPicker
-                                theme="dark"
-                                onEmojiClick={(emojiObject) => {
-                                    addReaction(msg.id, emojiObject.emoji);
-                                    setShowEmojiPicker(false);
-                                }}
-                                searchDisabled
-                                skinTonesDisabled
-                                height={350}
-                                width={300}
-                                previewConfig={{ showPreview: false }}
-                            />
-                        </div>
-                    </>,
-                    document.body
-                )}
-                <div className="separator"></div>
-                <span
-                    className={`option-btn pin-action ${msg.isPinned ? 'pinned' : ''}`}
-                    title={msg.isPinned ? "Unpin" : "Pin"}
-                    onClick={() => msg.isPinned ? pinMessage(msg.id, false) : pinMessage(msg.id, true)}
-                >
-                    📌
-                </span>
-                <span
-                    className={`option-btn star-action ${msg.isStarred ? 'starred' : ''}`}
-                    title={msg.isStarred ? "Unstar" : "Star"}
-                    onClick={() => starMessage(msg.id, !msg.isStarred)}
-                    style={{ color: msg.isStarred ? '#fbbf24' : 'inherit' }}
-                >
-                    ⭐
-                </span>
-                {isMe && (
-                    <>
-                        <div className="separator"></div>
-                        {msg.type === 'text' && !msg.isForwarded && (
-                            <span className="option-btn edit-action" title="Edit" onClick={() => initiateEdit(msg)}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                            </span>
-                        )}
-                        <span className="option-btn delete-action" title="Delete" onClick={() => confirmDelete(msg.id)}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                        </span>
-                    </>
-                )}
-            </div>
-
-            {!isMe && chatInfo?.type === 'group' && <div className="sender-name">{msg.senderName}</div>}
-
-            {msg.replyTo && (
-                <div className="quoted-message" onClick={() => document.getElementById(`msg-${msg.replyTo.id}`)?.scrollIntoView({ behavior: 'smooth' })}>
-                    <strong>{msg.replyTo.senderName}</strong>
-                    <span>{msg.replyTo.text}</span>
-                </div>
-            )}
-
-            {/* Forwarded Label */}
-            {msg.isForwarded && (
-                <div
-                    onClick={() => setShowOriginalSender(!showOriginalSender)}
-                    style={{
-                        fontSize: '0.75rem',
-                        color: '#94a3b8',
-                        marginBottom: '4px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                    }}
-                >
-                    {msg.forwardCount >= 2 ? '↪↪' : '↪'}
-                    <span style={{ fontStyle: 'italic' }}>
-                        {msg.forwardCount >= 2 ? 'Forwarded many times' : 'Forwarded'}
+                        </>,
+                        document.body
+                    )}
+                    <div className="separator"></div>
+                    <span
+                        className={`option-btn pin-action ${msg.isPinned ? 'pinned' : ''}`}
+                        title={msg.isPinned ? "Unpin" : "Pin"}
+                        onClick={() => msg.isPinned ? pinMessage(msg.id, false) : pinMessage(msg.id, true)}
+                    >
+                        📌
                     </span>
-                    {showOriginalSender && msg.originalSender && (
-                        <span style={{
-                            background: 'rgba(99, 102, 241, 0.2)',
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            marginLeft: '4px',
-                            fontSize: '0.7rem'
-                        }}>
-                            Originally from: {msg.originalSender}
+                    <span
+                        className={`option-btn star-action ${msg.isStarred ? 'starred' : ''}`}
+                        title={msg.isStarred ? "Unstar" : "Star"}
+                        onClick={() => starMessage(msg.id, !msg.isStarred)}
+                        style={{ color: msg.isStarred ? '#fbbf24' : 'inherit' }}
+                    >
+                        ⭐
+                    </span>
+                    {isMe && (
+                        <>
+                            <div className="separator"></div>
+                            {msg.type === 'text' && !msg.isForwarded && (
+                                <span className="option-btn edit-action" title="Edit" onClick={() => initiateEdit(msg)}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                </span>
+                            )}
+                            <span className="option-btn delete-action" title="Delete" onClick={() => confirmDelete(msg.id)}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </span>
+                        </>
+                    )}
+                </div>
+
+                {!isMe && chatInfo?.type === 'group' && <div className="sender-name">{msg.senderName}</div>}
+
+                {msg.replyTo && (
+                    <div className="quoted-message" onClick={() => document.getElementById(`msg-${msg.replyTo.id}`)?.scrollIntoView({ behavior: 'smooth' })}>
+                        <strong>{msg.replyTo.senderName}</strong>
+                        <span>{msg.replyTo.text}</span>
+                    </div>
+                )}
+
+                {/* Forwarded Label */}
+                {msg.isForwarded && (
+                    <div
+                        onClick={() => setShowOriginalSender(!showOriginalSender)}
+                        style={{
+                            fontSize: '0.75rem',
+                            color: '#94a3b8',
+                            marginBottom: '4px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                        }}
+                    >
+                        {msg.forwardCount >= 2 ? '↪↪' : '↪'}
+                        <span style={{ fontStyle: 'italic' }}>
+                            {msg.forwardCount >= 2 ? 'Forwarded many times' : 'Forwarded'}
                         </span>
-                    )}
-                </div>
-            )}
-
-            {/* Starred Indicator */}
-            {msg.isStarred && (
-                <div
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        starMessage(msg.id, false);
-                    }}
-                    title="Click to Unstar"
-                    style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '-12px',
-                        transform: 'translateY(-50%)',
-                        background: '#fbbf24',
-                        borderRadius: '50%',
-                        width: '24px',
-                        height: '24px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.85rem',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                        zIndex: 10,
-                        border: '2px solid rgba(30, 41, 59, 1)',
-                        cursor: 'pointer'
-                    }}
-                >
-                    ⭐
-                </div>
-            )}
-
-            {/* Content Types */}
-            {msg.type === 'image' && <img src={msg.fileURL} alt="attachment" loading="lazy" onClick={() => window.open(msg.fileURL, '_blank')} />}
-            {msg.type === 'audio' && <AudioPlayer src={msg.fileURL} />}
-            {(msg.type === 'video' || msg.type === 'video_note') && (
-                <VideoPlayer
-                    src={msg.videoURL || msg.fileURL}
-                    thumbnailSrc={msg.thumbnailURL}
-                    duration={msg.duration}
-                    isCircular={msg.type === 'video_note'}
-                    startTime={msg.startTime}
-                    endTime={msg.endTime}
-                />
-            )}
-            {msg.type === 'text' && <div>{renderText(msg.text) || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>(No content)</span>}</div>}
-            {msg.type === 'poll' && <PollMessage msg={msg} chatId={chatId} />}
-            {msg.type === 'file' && (
-                <a href={msg.fileURL} target="_blank" className="file-attachment">
-                    <div className="file-attachment-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg></div>
-                    <div className="file-attachment-info"><span>{msg.fileName}</span> <small>Attachment</small></div>
-                </a>
-            )}
-
-            {/* Link Preview Card - Shows when Cloud Function extracts URL metadata */}
-            {msg.linkPreview && (
-                <a
-                    href={msg.linkPreview.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="link-preview-card"
-                    style={{
-                        display: 'block',
-                        marginTop: '0.5rem',
-                        background: 'rgba(0, 0, 0, 0.2)',
-                        borderRadius: '8px',
-                        overflow: 'hidden',
-                        textDecoration: 'none',
-                        color: 'inherit',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        transition: 'all 0.2s ease'
-                    }}
-                >
-                    {/* Preview Image */}
-                    {msg.linkPreview.image && (
-                        <img
-                            src={msg.linkPreview.image}
-                            alt=""
-                            loading="lazy"
-                            style={{
-                                width: '100%',
-                                maxHeight: '150px',
-                                objectFit: 'cover',
-                                display: 'block'
-                            }}
-                            onError={(e) => e.target.style.display = 'none'}
-                        />
-                    )}
-                    {/* Preview Text */}
-                    <div style={{ padding: '0.75rem' }}>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--primary-light)', marginBottom: '4px', textTransform: 'uppercase' }}>
-                            {msg.linkPreview.siteName}
-                        </div>
-                        <div style={{ fontWeight: 500, fontSize: '0.9rem', marginBottom: '4px', lineHeight: 1.3 }}>
-                            {msg.linkPreview.title}
-                        </div>
-                        {msg.linkPreview.description && (
-                            <div style={{ fontSize: '0.8rem', opacity: 0.7, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                {msg.linkPreview.description}
-                            </div>
+                        {showOriginalSender && msg.originalSender && (
+                            <span style={{
+                                background: 'rgba(99, 102, 241, 0.2)',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                marginLeft: '4px',
+                                fontSize: '0.7rem'
+                            }}>
+                                Originally from: {msg.originalSender}
+                            </span>
                         )}
                     </div>
-                </a>
-            )}
-
-            {/* Reactions */}
-            {Object.keys(reactionCounts).length > 0 && (
-                <div className="reaction-container">
-                    {Object.entries(reactionCounts).map(([emoji, count]) => {
-                        const hasReacted = msg.reactions?.[currentUser.uid] === emoji;
-                        return (
-                            <span
-                                key={emoji}
-                                className={`reaction-bubble ${hasReacted ? 'my-reaction' : ''}`}
-                                onClick={() => addReaction(msg.id, emoji)}
-                                style={{ cursor: 'pointer' }}
-                                title={hasReacted ? 'Click to remove your reaction' : 'Click to react'}
-                            >
-                                {emoji} {count > 1 ? count : ''}
-                            </span>
-                        );
-                    })}
-                </div>
-            )}
-
-            {/* Receipts */}
-            <div className="receipt-area">
-                <span className="timestamp">
-                    {msg.timestamp?.seconds ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '...'}
-                    {msg.edited && <span style={{ marginLeft: '4px', fontStyle: 'italic', opacity: 0.7 }}>(edited)</span>}
-                </span>
-                {isMe && (
-                    msg.status === 'seen' ?
-                        <div title="Read">
-                            <svg className="receipt-ticks receipt-seen" xmlns="http://www.w3.org/2000/svg" width="16" height="15" viewBox="0 0 16 15" fill="none">
-                                <path d="M15.01 3.316L8.408 11.75L5.593 8.883" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                <path d="M11.3 3.316L4.696 11.75L1.883 8.883" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                        </div>
-                        :
-                        <div title="Sent">
-                            <svg className="receipt-ticks receipt-sent" xmlns="http://www.w3.org/2000/svg" width="16" height="15" viewBox="0 0 16 15" fill="none">
-                                <path d="M11.3 3.316L4.696 11.75L1.883 8.883" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                        </div>
                 )}
+
+                {/* Starred Indicator */}
+                {msg.isStarred && (
+                    <div
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            starMessage(msg.id, false);
+                        }}
+                        title="Click to Unstar"
+                        style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '-12px',
+                            transform: 'translateY(-50%)',
+                            background: '#fbbf24',
+                            borderRadius: '50%',
+                            width: '24px',
+                            height: '24px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.85rem',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                            zIndex: 10,
+                            border: '2px solid rgba(30, 41, 59, 1)',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        ⭐
+                    </div>
+                )}
+
+                {/* Content Types */}
+                {msg.type === 'image' && <img src={msg.fileURL} alt="attachment" loading="lazy" onClick={() => window.open(msg.fileURL, '_blank')} />}
+                {msg.type === 'audio' && <AudioPlayer src={msg.fileURL} />}
+                {(msg.type === 'video' || msg.type === 'video_note') && (
+                    <VideoPlayer
+                        src={msg.videoURL || msg.fileURL}
+                        thumbnailSrc={msg.thumbnailURL}
+                        duration={msg.duration}
+                        isCircular={msg.type === 'video_note'}
+                        startTime={msg.startTime}
+                        endTime={msg.endTime}
+                    />
+                )}
+                {msg.type === 'text' && <div>{renderText(msg.text) || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>(No content)</span>}</div>}
+                {msg.type === 'poll' && <PollMessage msg={msg} chatId={chatId} />}
+                {msg.type === 'file' && (
+                    <a href={msg.fileURL} target="_blank" className="file-attachment">
+                        <div className="file-attachment-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg></div>
+                        <div className="file-attachment-info"><span>{msg.fileName}</span> <small>Attachment</small></div>
+                    </a>
+                )}
+
+                {/* Link Preview Card - Shows when Cloud Function extracts URL metadata */}
+                {msg.linkPreview && (
+                    <a
+                        href={msg.linkPreview.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="link-preview-card"
+                        style={{
+                            display: 'block',
+                            marginTop: '0.5rem',
+                            background: 'rgba(0, 0, 0, 0.2)',
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            textDecoration: 'none',
+                            color: 'inherit',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            transition: 'all 0.2s ease'
+                        }}
+                    >
+                        {/* Preview Image */}
+                        {msg.linkPreview.image && (
+                            <img
+                                src={msg.linkPreview.image}
+                                alt=""
+                                loading="lazy"
+                                style={{
+                                    width: '100%',
+                                    maxHeight: '150px',
+                                    objectFit: 'cover',
+                                    display: 'block'
+                                }}
+                                onError={(e) => e.target.style.display = 'none'}
+                            />
+                        )}
+                        {/* Preview Text */}
+                        <div style={{ padding: '0.75rem' }}>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--primary-light)', marginBottom: '4px', textTransform: 'uppercase' }}>
+                                {msg.linkPreview.siteName}
+                            </div>
+                            <div style={{ fontWeight: 500, fontSize: '0.9rem', marginBottom: '4px', lineHeight: 1.3 }}>
+                                {msg.linkPreview.title}
+                            </div>
+                            {msg.linkPreview.description && (
+                                <div style={{ fontSize: '0.8rem', opacity: 0.7, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                    {msg.linkPreview.description}
+                                </div>
+                            )}
+                        </div>
+                    </a>
+                )}
+
+                {/* Reactions */}
+                {Object.keys(reactionCounts).length > 0 && (
+                    <div className="reaction-container">
+                        {Object.entries(reactionCounts).map(([emoji, count]) => {
+                            const hasReacted = msg.reactions?.[currentUser.uid] === emoji;
+                            return (
+                                <span
+                                    key={emoji}
+                                    className={`reaction-bubble ${hasReacted ? 'my-reaction' : ''}`}
+                                    onClick={() => addReaction(msg.id, emoji)}
+                                    style={{ cursor: 'pointer' }}
+                                    title={hasReacted ? 'Click to remove your reaction' : 'Click to react'}
+                                >
+                                    {emoji} {count > 1 ? count : ''}
+                                </span>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* Receipts */}
+                <div className="receipt-area">
+                    <span className="timestamp">
+                        {msg.timestamp?.seconds ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '...'}
+                        {msg.edited && <span style={{ marginLeft: '4px', fontStyle: 'italic', opacity: 0.7 }}>(edited)</span>}
+                    </span>
+                    {isMe && (
+                        msg.status === 'seen' ?
+                            <div title="Read">
+                                <svg className="receipt-ticks receipt-seen" xmlns="http://www.w3.org/2000/svg" width="16" height="15" viewBox="0 0 16 15" fill="none">
+                                    <path d="M15.01 3.316L8.408 11.75L5.593 8.883" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M11.3 3.316L4.696 11.75L1.883 8.883" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            </div>
+                            :
+                            <div title="Sent">
+                                <svg className="receipt-ticks receipt-sent" xmlns="http://www.w3.org/2000/svg" width="16" height="15" viewBox="0 0 16 15" fill="none">
+                                    <path d="M11.3 3.316L4.696 11.75L1.883 8.883" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            </div>
+                    )}
+                </div>
             </div>
-        </div>
+            {profileUser && ReactDOM.createPortal(
+                <UserProfileModal
+                    username={profileUser.username}
+                    userId={profileUser.userId}
+                    onClose={() => setProfileUser(null)}
+                />,
+                document.body
+            )}
+        </React.Fragment>
     );
 }
 
@@ -672,6 +701,7 @@ export default React.memo(MessageItem, (prevProps, nextProps) => {
         prevProps.msg.isPinned === nextProps.msg.isPinned &&
         prevProps.msg.isStarred === nextProps.msg.isStarred &&
         prevProps.highlightText === nextProps.highlightText &&
-        JSON.stringify(prevProps.msg.pollData?.votes) === JSON.stringify(nextProps.msg.pollData?.votes)
+        JSON.stringify(prevProps.msg.pollData?.options) === JSON.stringify(nextProps.msg.pollData?.options) &&
+        prevProps.msg.pollData?.totalVotes === nextProps.msg.pollData?.totalVotes
     );
 });

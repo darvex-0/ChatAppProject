@@ -1876,3 +1876,713 @@
 .mention-name {
   font-weight: 500;
 }
+
+/* ========================================
+   POLL COMPONENT STYLES
+   ======================================== */
+.poll-message {
+  background: var(--chat-bubble-bg);
+  border-radius: 16px;
+  padding: 1rem;
+  min-width: 260px;
+  max-width: 380px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  margin: 0.5rem 0;
+}
+
+.poll-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.poll-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.poll-meta-badge {
+  font-size: 0.65rem;
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--primary-light);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  font-weight: 500;
+}
+
+.poll-timer {
+  font-size: 0.75rem;
+  color: var(--app-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.poll-timer.expired {
+  color: #ef4444;
+}
+
+.poll-question {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--app-text);
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+
+.poll-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.poll-option {
+  position: relative;
+  width: 100%;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  text-align: left;
+}
+
+.poll-option:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(99, 102, 241, 0.3);
+  transform: translateY(-1px);
+}
+
+.poll-option:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.poll-option.my-vote {
+  border-color: var(--primary);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.poll-option.has-image {
+  flex-direction: row;
+  align-items: stretch;
+}
+
+.poll-option-image-wrapper {
+  width: 100%;
+  height: 120px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.poll-option.has-image .poll-option-image-wrapper {
+  width: 80px;
+  height: auto;
+  min-height: 64px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.poll-option-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.poll-option:hover .poll-option-image {
+  transform: scale(1.05);
+}
+
+.poll-option.has-image .poll-option-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.poll-option-main {
+  position: relative;
+  width: 100%;
+  padding: 10px 12px;
+}
+
+.poll-option-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 0;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.poll-option-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.poll-option-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.poll-circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--gray);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.poll-circle.checked {
+  border-color: var(--primary);
+}
+
+.poll-circle-inner {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: scaleIn 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.poll-option-text {
+  font-size: 0.95rem;
+  color: var(--app-text);
+  font-weight: 500;
+}
+
+.poll-option-pct {
+  font-size: 0.85rem;
+  color: var(--app-text);
+  /* Brighter contrast instead of muted */
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  /* Extra legibility against bar colors */
+}
+
+.poll-footer {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 0.75rem;
+}
+
+.poll-vote-count {
+  font-size: 0.8rem;
+  color: var(--app-text-muted);
+}
+
+.voted-label {
+  font-size: 0.75rem;
+  color: var(--primary-light);
+  font-weight: 500;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+/* Poll Creator Specific */
+.poll-option-input-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.poll-option-img-preview {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.poll-settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 15px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+}
+
+.poll-setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.poll-setting-item span {
+  font-size: 0.8rem;
+  color: var(--app-text-muted);
+}
+
+/* ========================================
+   MENTIONS COMPONENT STYLES
+   ======================================== */
+.mention-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: 280px;
+  max-height: 320px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-bottom: 8px;
+  padding: 12px;
+  animation: slideUpIn 0.2s cubic-bezier(0, 0, 0.2, 1);
+}
+
+.mention-dropdown-header {
+  padding: 8px 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--app-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.mention-hint {
+  font-weight: 400;
+  text-transform: none;
+  opacity: 0.6;
+}
+
+.mention-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mention-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mention-item:hover,
+.mention-item.active {
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.mention-item.active {
+  box-shadow: inset 0 0 0 1.5px var(--primary);
+}
+
+.mention-avatar-container {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.ai-avatar {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mention-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.mention-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.mention-handle {
+  font-size: 0.8rem;
+  color: var(--app-text-muted);
+}
+
+.ai-badge {
+  font-size: 0.65rem;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-left: 8px;
+}
+
+.mention-highlight {
+  color: #818cf8;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.mention-highlight:hover {
+  background: rgba(99, 102, 241, 0.2);
+  transform: translateY(-1px);
+}
+
+.mention-highlight.ai-mention {
+  background: linear-gradient(120deg, rgba(99, 102, 241, 0.25), rgba(139, 92, 246, 0.25));
+  color: #a5b4fc;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+}
+
+@keyframes slideUpIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================
+   USER PROFILE MODAL (WhatsApp Style)
+   ============================================================ */
+
+.upm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+
+.upm-modal {
+  position: relative;
+  width: 360px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--bg-secondary, #1e293b);
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  animation: scaleIn 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.upm-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.4);
+  border: none;
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.upm-close:hover {
+  background: rgba(239, 68, 68, 0.7);
+}
+
+/* Cover / Avatar */
+.upm-cover {
+  position: relative;
+  height: 140px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 0;
+}
+
+.upm-cover-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+  border-radius: 20px 20px 0 0;
+}
+
+.upm-avatar-wrap {
+  position: absolute;
+  bottom: -42px;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  border: 4px solid var(--bg-secondary, #1e293b);
+  overflow: hidden;
+  cursor: zoom-in;
+  transition: transform 0.3s;
+  z-index: 2;
+}
+
+.upm-avatar-wrap.expanded {
+  width: 200px;
+  height: 200px;
+  border-radius: 12px;
+  bottom: -100px;
+  transform: scale(1.05);
+}
+
+.upm-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Info */
+.upm-info {
+  padding: 52px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upm-name {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--app-text, white);
+  margin: 0;
+  text-align: center;
+}
+
+.upm-handle {
+  font-size: 0.85rem;
+  color: var(--app-text-muted, #94a3b8);
+  text-align: center;
+  margin: 0;
+}
+
+.upm-online-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: var(--app-text-muted);
+}
+
+.upm-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.upm-dot.online {
+  background: #22c55e;
+  box-shadow: 0 0 6px #22c55e;
+}
+
+.upm-dot.offline {
+  background: #94a3b8;
+}
+
+/* About / Bio */
+.upm-about {
+  margin-top: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.upm-section-label {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--primary-light, #a5b4fc);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.upm-about p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--app-text);
+  line-height: 1.5;
+}
+
+/* Meta rows */
+.upm-meta-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.upm-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--app-text-muted);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+
+.upm-meta-icon {
+  font-size: 1rem;
+}
+
+/* Mutual Groups */
+.upm-groups {
+  margin-top: 4px;
+}
+
+.upm-groups-list {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.upm-group-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  color: var(--app-text);
+}
+
+.upm-group-chip img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.upm-more-groups {
+  font-size: 0.8rem;
+  color: var(--app-text-muted);
+  padding: 4px 12px;
+}
+
+/* Actions */
+.upm-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.upm-btn-primary {
+  flex: 1;
+  padding: 11px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.upm-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+}
+
+.upm-self-note {
+  font-size: 0.85rem;
+  color: var(--app-text-muted);
+  text-align: center;
+  width: 100%;
+  margin: 0;
+}
+
+/* Loading / Not Found */
+.upm-loading,
+.upm-not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 24px;
+  color: var(--app-text-muted);
+  font-size: 0.9rem;
+}
+
+.upm-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(99, 102, 241, 0.2);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

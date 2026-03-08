@@ -1,6 +1,55 @@
 
 
+
 # Project Changelog
+
+## Version 3.1 - Poll Fixes, User Profiles & Mention Navigation 🔧👤
+**Date:** 8th March 2026
+
+**New Features:**
+- **User Profile Modal (WhatsApp-style)**: Clicking any `@mention` now opens a full user profile card featuring:
+  - Gradient cover with smooth dark-blend fade
+  - Expandable profile avatar (click to zoom)
+  - Name, @handle, online status, About/Bio section
+  - Email, join date, and mutual groups
+  - **Message button** — opens existing DM or creates a new one and navigates directly
+
+**Bug Fixes & Improvements:**
+- **Poll Voting Fixed**: Resolved a critical Firestore corruption bug where voting would convert the `options` array into a map object, breaking the poll UI. Now uses full-array replacement strategy.
+- **Poll UI Redesign**: Options with images now display in YouTube-style horizontal layout (image left, text/bar right) instead of stacking vertically.
+- **Poll Percentage Visibility**: Increased contrast and font weight on vote percentages for better readability.
+- **Mention UID Resolution**: Mentions now store a `mentionMap` (handle → uid) in the Firestore message so clicking a mention always finds the correct user profile — even for names with spaces (e.g., `@LaonShark` correctly resolves to `Laon Shark`). Legacy messages use a normalised name-search fallback.
+- **Message Button Navigation**: Fixed navigate URL to use the correct `/c/:chatId` route.
+
+**Technical Details:**
+- `PollMessage.jsx`: Votes written as full array replacement; corrupted object-type options automatically reconstructed.
+- `ChatWindow.jsx`: `mentionMapRef` tracks `handle → uid` per session and saves to Firestore on send.
+- `MessageItem.jsx`: Mention spans resolve uid from `msg.mentionMap` before opening `UserProfileModal`.
+- `UserProfileModal.jsx`: Priority lookup by uid (fast), falls back to normalised client-side name scan for legacy messages.
+
+---
+
+## Version 3.0 - Pro Polls & @AI Mentions 🚀✨
+**Date:** 5th March 2026
+
+**New Features:**
+- **Advanced Polls 2.0**: Premium polling experience with media support.
+  - **Image Options**: Attach images to poll options for visual selection.
+  - **Anonymous Mode**: Secure, private voting for sensitive topics.
+  - **Expirations**: Add real-time countdown timers to polls.
+  - **Multi-Select**: Support for multiple choice voting.
+- **Pro Mentions & @AI Integration**:
+  - **Advanced Suggestions**: New dropdown with avatars and keyboard navigation support.
+  - **@AI Command**: Tagging "@AI" triggers an intelligent, proactive response from the AI Assistant.
+  - **High-Impact Rendering**: Mentions are now highlighted with premium glows and special classes.
+- **Glass-morphism UI Overhaul**: Updated the input bar and modals with a modern, translucent aesthetic for a premium feel.
+
+**Technical Details:**
+- Integrated AI triggers directly into the message pipeline in `ChatWindow.jsx`.
+- Enhanced `PollMessage.jsx` with reactive progress bars and image lazy-loading.
+- Robust keyboard event handling for the mention system.
+
+---
 
 ## Version 2.30 - Stories, Polls, & Media Cropping 📸📊
 **Date:** 4th March 2026
