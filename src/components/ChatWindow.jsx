@@ -968,16 +968,16 @@ export default function ChatWindow() {
         }
     };
 
-    const initiateReply = (msg) => {
+    const initiateReply = useCallback((msg) => {
         setReplyTo({ id: msg.id, text: msg.text || (msg.type === 'image' ? 'Image' : msg.type === 'video' ? 'Video' : 'Voice Message'), senderName: msg.senderName });
         inputRef.current?.focus();
-    };
+    }, []);
 
     const cancelReply = () => {
         setReplyTo(null);
     };
 
-    const addReaction = async (msgId, emoji) => {
+    const addReaction = useCallback(async (msgId, emoji) => {
         try {
             const msgRef = doc(db, "chats", chatId, "messages", msgId);
 
@@ -994,12 +994,12 @@ export default function ChatWindow() {
         } catch (e) {
             console.error(e);
         }
-    };
+    }, [chatId, messages, currentUser.uid]);
 
     // Trigger Delete Confirmation
-    const confirmDelete = (msgId) => {
+    const confirmDelete = useCallback((msgId) => {
         setDeleteMsgId(msgId);
-    };
+    }, []);
 
     // Perform Actual Delete
     const performDelete = async () => {
@@ -1014,14 +1014,14 @@ export default function ChatWindow() {
     };
 
     // Initiate Edit
-    const initiateEdit = (msg) => {
+    const initiateEdit = useCallback((msg) => {
         if (msg.type !== 'text') {
             showAlert("Only text messages can be edited");
             return;
         }
         setEditMsg(msg);
         setEditText(msg.text || "");
-    };
+    }, [showAlert]);
 
     // Perform Actual Edit
     const performEdit = async () => {
@@ -1152,9 +1152,9 @@ export default function ChatWindow() {
 
 
     // Initiate Forward
-    const initiateForward = (msg) => {
+    const initiateForward = useCallback((msg) => {
         setForwardMsg(msg);
-    };
+    }, []);
 
     // Track forward count for multi-forward
     const forwardCountRef = useRef(0);

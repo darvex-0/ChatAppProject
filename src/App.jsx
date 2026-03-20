@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { UIProvider, useUI } from "./context/UIContext";
 import { lazy, Suspense, useEffect } from "react";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { messaging, db } from "./services/firebase";
 import { getToken, onMessage } from "firebase/messaging";
 import { doc, updateDoc } from "firebase/firestore";
@@ -90,24 +91,28 @@ function FCMHandler() {
 
 function App() {
     return (
-        <AuthProvider>
-            <UIProvider>
-                <FCMHandler />
-                <BrowserRouter>
-                    {/* Suspense shows LoadingFallback while lazy components download */}
-                    <Suspense fallback={<LoadingFallback />}>
-                        <Routes>
-                            <Route path="/login" element={<Login />} />
-                            <Route path="/" element={<Layout />}>
-                                <Route index element={<Dashboard />} />
-                                <Route path="c/:chatId" element={<Dashboard />} />
-                            </Route>
-                            <Route path="*" element={<Navigate to="/" />} />
-                        </Routes>
-                    </Suspense>
-                </BrowserRouter>
-            </UIProvider>
-        </AuthProvider>
+        <ErrorBoundary>
+            <AuthProvider>
+                <UIProvider>
+                    <FCMHandler />
+                    <BrowserRouter>
+                        {/* Suspense shows LoadingFallback while lazy components download */}
+                        <Suspense fallback={<LoadingFallback />}>
+                            <ErrorBoundary>
+                                <Routes>
+                                    <Route path="/login" element={<Login />} />
+                                    <Route path="/" element={<Layout />}>
+                                        <Route index element={<Dashboard />} />
+                                        <Route path="c/:chatId" element={<Dashboard />} />
+                                    </Route>
+                                    <Route path="*" element={<Navigate to="/" />} />
+                                </Routes>
+                            </ErrorBoundary>
+                        </Suspense>
+                    </BrowserRouter>
+                </UIProvider>
+            </AuthProvider>
+        </ErrorBoundary>
     );
 }
 
