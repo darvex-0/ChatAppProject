@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export default function ChatHeader({
+export default React.memo(function ChatHeader({
     chatInfo,
     handleStartCall,
     isMenuOpen, setIsMenuOpen,
@@ -238,4 +238,5 @@ export default function ChatHeader({
             })()}
         </>
     );
-}
+});
+

@@ -4,7 +4,7 @@ import EmojiPicker from 'emoji-picker-react';
 import SmartReplies from '../SmartReplies';
 import MentionSuggestions from '../MentionSuggestions';
 
-export default function MessageInputArea({
+export default React.memo(function MessageInputArea({
     smartReplies, isLoadingReplies, handleSmartReplyClick,
     isRecording, voicePreviewUrl, editMsg,
     voiceDraft, formatDuration, deleteVoiceDraft, sendVoiceDraft,
@@ -428,4 +428,5 @@ export default function MessageInputArea({
             </div>
         </>
     );
-}
+});
+

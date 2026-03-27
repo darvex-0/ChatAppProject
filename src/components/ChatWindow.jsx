@@ -557,7 +557,7 @@ export default function ChatWindow() {
     };
 
     // Load More Function
-    const loadMoreMessages = () => {
+    const loadMoreMessages = useCallback(() => {
         // Only load if we have enough messages to suspect there are more
         if (messages.length >= messageLimit && !isLoadingMore) {
             setIsLoadingMore(true);
@@ -567,7 +567,7 @@ export default function ChatWindow() {
                 setIsLoadingMore(false);
             }, 500);
         }
-    };
+    }, [messages.length, messageLimit, isLoadingMore]);
 
     // Read Receipt Logic: Mark messages as 'seen' when I view the chat
     useEffect(() => {

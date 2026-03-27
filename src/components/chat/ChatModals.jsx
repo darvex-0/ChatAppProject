@@ -7,7 +7,7 @@ import VideoRecorder from '../VideoRecorder';
 import MediaCamera from '../MediaCamera';
 import PollCreator from '../Modals/PollCreator';
 
-export default function ChatModals({
+export default React.memo(function ChatModals({
     chatId,
     showInfoModal, setShowInfoModal,
     showWallpaperModal, setShowWallpaperModal, handleUpdateWallpaper,
@@ -353,4 +353,5 @@ export default function ChatModals({
             )}
         </>
     );
-}
+});
+

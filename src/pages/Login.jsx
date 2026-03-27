@@ -1,8 +1,9 @@
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
-import EarthGlobe from "../components/EarthGlobe";
+import { useEffect, lazy, Suspense } from "react";
 import LoginCard from "../components/LoginCard";
+
+const EarthGlobe = lazy(() => import("../components/EarthGlobe"));
 
 export default function Login() {
     const { login, currentUser } = useAuth();
@@ -28,9 +29,11 @@ export default function Login() {
             {/* Background Gradient Layer */}
             <div className="absolute inset-0 bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#312e81] opacity-80 z-[-20] fixed" />
 
-            {/* 3D Earth Component */}
+            {/* 3D Earth Component - Lazy Loaded */}
             <div className="absolute inset-0 z-0 fixed">
-                <EarthGlobe />
+                <Suspense fallback={null}>
+                    <EarthGlobe />
+                </Suspense>
             </div>
 
             {/* Main Content Layout - Added pointer-events-none to let mouse pass to canvas */}

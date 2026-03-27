@@ -2,7 +2,7 @@ import React from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import MessageItem from '../MessageItem';
 
-export default function MessageList({
+export default React.memo(function MessageList({
     chatId,
     messages,
     starredIds,
@@ -84,4 +84,5 @@ export default function MessageList({
             <div id="typingIndicator">{typingUser && <span>{typingUser}</span>}</div>
         </>
     );
-}
+});
+
