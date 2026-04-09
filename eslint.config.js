@@ -2,11 +2,12 @@ import js from '@eslint/js';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import reactRefreshPlugin from 'eslint-plugin-react-refresh';
+import globals from 'globals';
 
 export default [
     js.configs.recommended,
     {
-        files: ['**/*.{js,jsx}'],
+        files: ['src/**/*.{js,jsx}'],
         languageOptions: {
             ecmaVersion: 2022,
             sourceType: 'module',
@@ -16,29 +17,7 @@ export default [
                 },
             },
             globals: {
-                window: 'readonly',
-                document: 'readonly',
-                navigator: 'readonly',
-                console: 'readonly',
-                setTimeout: 'readonly',
-                clearTimeout: 'readonly',
-                setInterval: 'readonly',
-                clearInterval: 'readonly',
-                localStorage: 'readonly',
-                URL: 'readonly',
-                Date: 'readonly',
-                FileReader: 'readonly',
-                Blob: 'readonly',
-                Audio: 'readonly',
-                MediaRecorder: 'readonly',
-                IntersectionObserver: 'readonly',
-                fetch: 'readonly',
-                Promise: 'readonly',
-                Math: 'readonly',
-                JSON: 'readonly',
-                Object: 'readonly',
-                Array: 'readonly',
-                React: 'readonly',
+                ...globals.browser,
             },
         },
         plugins: {
