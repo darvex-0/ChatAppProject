@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { collection, query, where, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
@@ -42,8 +42,15 @@ export default function Sidebar() {
     const { callHistory, callUser, setCallInfoContact } = useCall();
     const [chats, setChats] = useState([]);
     const navigate = useNavigate();
+    const { chatId } = useParams(); // Get currently active chat
     const [activeTab, setActiveTab] = useState('chats'); // 'chats' | 'calls' | 'notes'
     const userCache = useRef({});
+
+    // Helper: Supress unread count for the currently open chat
+    const getUnreadCount = useCallback((chat) => {
+        if (chat.id === chatId) return 0; // Don't show unread count if we are currently looking at it
+        return chat.unreadCounts?.[currentUser.uid] || 0;
+    }, [chatId, currentUser.uid]);
 
     // PWA Install Prompt State
     const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -76,13 +83,13 @@ export default function Sidebar() {
         let lastNewMessage = null;
 
         chats.forEach(chat => {
-            const count = chat.unreadCounts?.[currentUser.uid] || 0;
+            const count = getUnreadCount(chat);
             currentUnreadCounts[chat.id] = count;
 
             // Check if unread count increased
             const prevCount = prevUnreadCountsRef.current[chat.id] || 0;
             if (count > prevCount) {
-                // Only trigger notification if NOT archived
+                // Only trigger notification if NOT archived and NOT currently active
                 if (!chat.isArchived) {
                     hasNewUnread = true;
                     lastNewMessage = chat;
@@ -375,7 +382,7 @@ export default function Sidebar() {
                             title="View Archived Chats"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
-                            {chats.filter(c => c.isArchived).reduce((acc, c) => acc + (c.unreadCounts?.[currentUser.uid] || 0), 0) > 0 && (
+                            {chats.filter(c => c.isArchived).reduce((acc, c) => acc + getUnreadCount(c), 0) > 0 && (
                                 <span style={{
                                     position: 'absolute',
                                     top: '-5px',
@@ -391,7 +398,7 @@ export default function Sidebar() {
                                     justifyContent: 'center',
                                     fontWeight: 'bold'
                                 }}>
-                                    {chats.filter(c => c.isArchived).reduce((acc, c) => acc + (c.unreadCounts?.[currentUser.uid] || 0), 0)}
+                                    {chats.filter(c => c.isArchived).reduce((acc, c) => acc + getUnreadCount(c), 0)}
                                 </span>
                             )}
                         </button>
@@ -572,7 +579,7 @@ export default function Sidebar() {
                                             ) : null}
                                             {chat.displayName}
                                         </strong>
-                                        {chat.unreadCounts?.[currentUser.uid] > 0 && (
+                                        {getUnreadCount(chat) > 0 && (
                                             <span style={{
                                                 background: 'var(--danger)',
                                                 color: 'white',
@@ -586,7 +593,7 @@ export default function Sidebar() {
                                                 fontWeight: 'bold',
                                                 marginLeft: 'auto'
                                             }}>
-                                                {chat.unreadCounts[currentUser.uid]}
+                                                {getUnreadCount(chat)}
                                             </span>
                                         )}
                                     </div>
