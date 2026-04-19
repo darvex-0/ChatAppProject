@@ -3,6 +3,19 @@
 
 # Project Changelog
 
+
+## Version 3.3 - WebGL Stability & Mobile Optimization 🛡️📱
+**Date:** 19th April 2026
+
+**Bug Fixes:**
+- **WebGL Crash Prevention**: Wrapped the `EarthGlobe` component in a dedicated `ErrorBoundary` on the Login page. This prevents the "Something went wrong" screen if a device lacks WebGL support or textures fail to load, allowing a seamless fallback to the gradient background.
+
+**Performance & Optimization:**
+- **iPhone High-DPI Fix**: Clamped the Device Pixel Ratio (`dpr`) to 2 in the 3D globe renderer. This dramatically reduces memory consumption on Retina displays (iPhones/iPads), preventing browser-level GPU crashes while maintaining high visual quality.
+- **GPU Hint**: Added `high-performance` power preference to the WebGL context to ensure smoother 3D animations on compatible mobile hardware.
+
+---
+
 ## Version 3.2 - Architecture & Reactivity Optimization ⚡
 **Date:** 9th April 2026
 
