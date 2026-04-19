@@ -322,7 +322,7 @@ const Aurora = React.memo(() => {
     return (
         <mesh rotation={[0.4, 0, 0.2]}>
             {/* Sphere geometry enclosing the scene, back side rendered */}
-            <sphereGeometry args={[14, 64, 64]} />
+            <sphereGeometry args={[14, 32, 32]} />
             <shaderMaterial
                 ref={shaderRef}
                 vertexShader={auroraVertexShader}
@@ -348,7 +348,7 @@ const Nebula = React.memo(() => {
 
     return (
         <mesh>
-            <sphereGeometry args={[45, 64, 64]} />
+            <sphereGeometry args={[45, 32, 32]} />
             <shaderMaterial
                 ref={shaderRef}
                 vertexShader={nebulaVertexShader}
@@ -410,7 +410,7 @@ const GlobeMarkers = ({ radius }) => {
 
     return (
         <instancedMesh ref={markerRef} args={[undefined, undefined, locations.length]}>
-            <sphereGeometry args={[0.04, 16, 16]} />
+            <sphereGeometry args={[0.04, 8, 8]} />
             <meshBasicMaterial color="#ffffff" toneMapped={false} />
         </instancedMesh>
     );
@@ -440,7 +440,7 @@ const DigitalGlobe = ({ radius, cursorRef }) => {
         <group rotation-y={-Math.PI / 2}>
             {/* Main Dot Sphere */}
             <mesh>
-                <sphereGeometry args={[radius, 128, 128]} />
+                <sphereGeometry args={[radius, 64, 64]} />
                 <shaderMaterial
                     ref={materialRef}
                     vertexShader={globeVertexShader}
@@ -455,13 +455,13 @@ const DigitalGlobe = ({ radius, cursorRef }) => {
 
             {/* Inner Dark Sphere - Core */}
             <mesh>
-                <sphereGeometry args={[radius - 0.05, 64, 64]} />
+                <sphereGeometry args={[radius - 0.05, 32, 32]} />
                 <meshBasicMaterial color="#010205" />
             </mesh>
 
             {/* Atmosphere Glow */}
             <mesh scale={[1.15, 1.15, 1.15]}>
-                <sphereGeometry args={[radius, 64, 64]} />
+                <sphereGeometry args={[radius, 32, 32]} />
                 <shaderMaterial
                     vertexShader={atmosphereVertexShader}
                     fragmentShader={atmosphereFragmentShader}
@@ -478,7 +478,7 @@ const DigitalGlobe = ({ radius, cursorRef }) => {
 
 // DataStreams: Arcs flying across the globe
 const DataStreams = React.memo(({ radius }) => {
-    const maxStreams = 25;
+    const maxStreams = 10;
 
     // Use explicit city points for start/end to make it look like a network
     const cities = useMemo(() => {
@@ -553,12 +553,12 @@ const DataStreams = React.memo(({ radius }) => {
                         <group ref={(el) => (packetRefs.current[i] = el)}>
                             {/* Bright Core */}
                             <mesh>
-                                <sphereGeometry args={[0.04, 16, 16]} />
+                                <sphereGeometry args={[0.04, 8, 8]} />
                                 <meshBasicMaterial color="#ffffff" toneMapped={false} />
                             </mesh>
                             {/* Outer Glow */}
                             <mesh scale={[2.5, 2.5, 2.5]}>
-                                <sphereGeometry args={[0.06, 16, 16]} />
+                                <sphereGeometry args={[0.06, 8, 8]} />
                                 <meshBasicMaterial color={stream.color} transparent opacity={0.3} toneMapped={false} blending={THREE.AdditiveBlending} />
                             </mesh>
                         </group>
@@ -612,7 +612,7 @@ const InteractionHandler = ({ radius, onHover, cursorRef }) => {
             }}
             visible={false} // Hidden mesh for raycasting only
         >
-            <sphereGeometry args={[radius + 0.2, 64, 64]} />
+            <sphereGeometry args={[radius + 0.2, 32, 32]} />
             <meshBasicMaterial />
         </mesh>
     );
@@ -677,8 +677,8 @@ const EarthGlobe = () => {
 
                 {/* Deep background elements */}
                 <Nebula />
-                <Stars radius={300} depth={100} count={10000} factor={6} saturation={0} fade speed={1} />
-                <Sparkles count={500} scale={20} size={2} speed={0.4} opacity={0.5} color="#ffffff" />
+                <Stars radius={300} depth={100} count={3000} factor={6} saturation={0} fade speed={1} />
+                <Sparkles count={200} scale={20} size={2} speed={0.4} opacity={0.5} color="#ffffff" />
 
                 {/* Aurora Middle Layer */}
                 <Aurora />
