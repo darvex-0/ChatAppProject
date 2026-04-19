@@ -8,9 +8,15 @@
 **Date:** 19th April 2026
 
 **Bug Fixes:**
-- **WebGL Crash Prevention**: Wrapped the `EarthGlobe` component in a dedicated `ErrorBoundary` on the Login page. This prevents the "Something went wrong" screen if a device lacks WebGL support or textures fail to load, allowing a seamless fallback to the gradient background.
+- **WebGL Crash Prevention**: Wrapped the `EarthGlobe` component in a dedicated `ErrorBoundary` on the Login page. 
+- **ErrorBoundary Fallback Bug**: Fixed an internal logic bug in `ErrorBoundary.jsx` where a `fallback={null}` instruction to suppress a failure was evaluated as falsy and incorrectly bypassed, forcing a visible crash screen. It now properly fades out if WebGL context is lost.
 
 **Performance & Optimization:**
+- **iPhone Geometry & VRAM Optimization**: Slashed 3D rendering polygon counts and particle budgets to prevent iOS WebGL Out-Of-Memory (OOM) crashes:
+  - Reduced the `EarthGlobe` grid segments from 128x128 to 32x32/64x64.
+  - Slashed `Stars` particle count from 10,000 to 3,000.
+  - Slashed `Sparkles` particle count from 500 to 200.
+  - Halved background DataStream trail animations from 25 to 10.
 - **iPhone High-DPI Fix**: Clamped the Device Pixel Ratio (`dpr`) to 2 in the 3D globe renderer. This dramatically reduces memory consumption on Retina displays (iPhones/iPads), preventing browser-level GPU crashes while maintaining high visual quality.
 - **GPU Hint**: Added `high-performance` power preference to the WebGL context to ensure smoother 3D animations on compatible mobile hardware.
 
