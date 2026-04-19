@@ -664,7 +664,8 @@ const EarthGlobe = () => {
         <div className="absolute top-0 left-0 w-full h-full -z-10 overflow-hidden pointer-events-auto bg-[#020617]">
             <Canvas
                 camera={{ position: [0, 0, 8.5], fov: 40 }}
-                gl={{ antialias: true, alpha: false }} // alpha false for better performance and blending against black
+                gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }} // alpha false for better performance and blending against black
+                dpr={[1, 2]} // Cap devicePixelRatio to 2 to prevent crashes on iPhones/high-dpi screens
             >
                 <color attach="background" args={['#020617']} />
 

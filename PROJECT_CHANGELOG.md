@@ -15,6 +15,7 @@
 
 **Bug Fixes:**
 - **Unread Badge & Double Notifications**: Resolved an issue where receiving a message while actively inside a chat caused the sidebar unread badge to briefly flicker '1' and trigger a duplicate notification sound. The Sidebar now checks the active route parameters to dynamically suppress aggregate counters and push notifications for the currently focused chat.
+- **Legacy Mention Resolution**: Clicking an `@mention` in older messages (before full UID mapping was active) sometimes searched the entire global database fuzzily by name. Context-aware scoped searching has been added; it now prioritizes exact handle-matching specifically among the active `chatId` members before falling back. Also patched a race condition in `UserProfileModal` so Mutual Groups consistently render for string-matched profiles.
 
 ---
 

@@ -4,7 +4,7 @@ import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-export default function UserProfileModal({ userId, username, onClose }) {
+export default function UserProfileModal({ userId, username, chatId, onClose }) {
     const { currentUser } = useAuth();
     const navigate = useNavigate();
     const [userData, setUserData] = useState(null);
@@ -16,47 +16,73 @@ export default function UserProfileModal({ userId, username, onClose }) {
         const fetchUser = async () => {
             setLoading(true);
             try {
+                let resolvedUid = null;
+
                 // 1. If we have a direct uid — use it immediately (fastest & most reliable)
                 if (userId) {
                     const userSnap = await getDoc(doc(db, 'users', userId));
                     if (userSnap.exists()) {
                         setUserData({ uid: userId, ...userSnap.data() });
+                        resolvedUid = userId;
                     } else {
                         setUserData(null);
                     }
                 } else if (username) {
                     // 2. No uid — try to match by normalized name (handles space-stripped handles)
                     const normalizedHandle = username.toLowerCase().replace(/\s+/g, '');
+                    let foundData = null;
 
-                    // First try exact name match
-                    const exactQ = query(collection(db, 'users'), where('name', '==', username));
-                    const exactSnap = await getDocs(exactQ);
-
-                    if (!exactSnap.empty) {
-                        const d = exactSnap.docs[0];
-                        setUserData({ uid: d.id, ...d.data() });
-                    } else {
-                        // Fallback: fetch up to 100 users and normalize-match client-side
-                        // (This is only needed for legacy messages without mentionMap)
-                        const allSnap = await getDocs(collection(db, 'users'));
-                        let found = null;
-                        allSnap.forEach(d => {
-                            const name = d.data().name || '';
-                            if (name.toLowerCase().replace(/\s+/g, '') === normalizedHandle) {
-                                found = { uid: d.id, ...d.data() };
+                    // A) Scoped Search: Check if the user is a member of the current chat
+                    if (chatId) {
+                        const chatDoc = await getDoc(doc(db, 'chats', chatId));
+                        if (chatDoc.exists()) {
+                            const members = chatDoc.data().members || [];
+                            for (const uid of members) {
+                                const uDoc = await getDoc(doc(db, 'users', uid));
+                                if (uDoc.exists()) {
+                                    const uName = uDoc.data().name || '';
+                                    if (uName.toLowerCase().replace(/\s+/g, '') === normalizedHandle) {
+                                        resolvedUid = uid;
+                                        foundData = uDoc.data();
+                                        break; // Found precise match in this chat
+                                    }
+                                }
                             }
-                        });
-                        setUserData(found);
+                        }
                     }
-                } else {
-                    setUserData(null);
-                    setLoading(false);
-                    return;
+
+                    // B) Global Fallback: If not found in chat, search the entire database
+                    if (!foundData) {
+                        const exactQ = query(collection(db, 'users'), where('name', '==', username));
+                        const exactSnap = await getDocs(exactQ);
+
+                        if (!exactSnap.empty) {
+                            resolvedUid = exactSnap.docs[0].id;
+                            foundData = exactSnap.docs[0].data();
+                        } else {
+                            // Brute force normalisation
+                            const allSnap = await getDocs(collection(db, 'users'));
+                            allSnap.forEach(d => {
+                                const name = d.data().name || '';
+                                if (name.toLowerCase().replace(/\s+/g, '') === normalizedHandle && !foundData) {
+                                    resolvedUid = d.id;
+                                    foundData = d.data();
+                                }
+                            });
+                        }
+                    }
+
+                    if (foundData) {
+                        setUserData({ uid: resolvedUid, ...foundData });
+                    } else {
+                        setUserData(null);
+                        setLoading(false);
+                        return; // Exit early if user not found at all
+                    }
                 }
 
-                // Fetch mutual groups (using userId if available, else re-derive from userData)
-                const targetUid = userId || (userData?.uid);
-                if (targetUid) {
+                // Fetch mutual groups using the resolved targetUid
+                if (resolvedUid) {
                     const chatsQuery = query(
                         collection(db, 'chats'),
                         where('type', '==', 'group'),
@@ -66,7 +92,7 @@ export default function UserProfileModal({ userId, username, onClose }) {
                     const mutual = [];
                     chatsSnap.forEach(chatDoc => {
                         const data = chatDoc.data();
-                        if (data.members?.includes(targetUid)) {
+                        if (data.members?.includes(resolvedUid)) {
                             mutual.push({ id: chatDoc.id, ...data });
                         }
                     });

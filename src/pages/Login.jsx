@@ -2,6 +2,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, lazy, Suspense } from "react";
 import LoginCard from "../components/LoginCard";
+import ErrorBoundary from "../components/ErrorBoundary";
 
 const EarthGlobe = lazy(() => import("../components/EarthGlobe"));
 
@@ -31,9 +32,11 @@ export default function Login() {
 
             {/* 3D Earth Component - Lazy Loaded */}
             <div className="absolute inset-0 z-0 fixed">
-                <Suspense fallback={null}>
-                    <EarthGlobe />
-                </Suspense>
+                <ErrorBoundary fallback={null}>
+                    <Suspense fallback={null}>
+                        <EarthGlobe />
+                    </Suspense>
+                </ErrorBoundary>
             </div>
 
             {/* Main Content Layout - Added pointer-events-none to let mouse pass to canvas */}

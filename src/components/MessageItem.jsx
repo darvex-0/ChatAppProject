@@ -683,6 +683,7 @@ function MessageItem({ msg, currentUser, chatInfo, chatId, initiateReply, initia
                 <UserProfileModal
                     username={profileUser.username}
                     userId={profileUser.userId}
+                    chatId={chatId}
                     onClose={() => setProfileUser(null)}
                 />,
                 document.body
