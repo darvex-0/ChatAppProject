@@ -11,6 +11,8 @@
 - **WebGL Crash Prevention**: Wrapped the `EarthGlobe` component in a dedicated `ErrorBoundary` on the Login page. 
 - **ErrorBoundary Fallback Bug**: Fixed an internal logic bug in `ErrorBoundary.jsx` where a `fallback={null}` instruction to suppress a failure was evaluated as falsy and incorrectly bypassed, forcing a visible crash screen. It now properly fades out if WebGL context is lost.
 
+- **Story Privacy Patch**: Fixed a vulnerability where stories were visible to all users globally. Story visibility is now strictly enforced; you will only see stories from users who are in your active conversation list (friends you have already messaged).
+
 **Performance & Optimization:**
 - **iPhone Geometry & VRAM Optimization**: Slashed 3D rendering polygon counts and particle budgets to prevent iOS WebGL Out-Of-Memory (OOM) crashes:
   - Reduced the `EarthGlobe` grid segments from 128x128 to 32x32/64x64.
