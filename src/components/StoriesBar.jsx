@@ -48,9 +48,8 @@ export default function StoriesBar({ friendIds = [] }) {
     // My stories
     const myStories = storiesByUser[currentUser.uid] || [];
 
-    // Friend stories — simply show all stories that aren't ours
-    // (If you want to STRICTLY limit to friendIds, you can change this back)
-    const allOtherUids = Object.keys(storiesByUser).filter(id => id !== currentUser.uid);
+    // Friend stories — strictly limited to users in friendIds
+    const allOtherUids = Object.keys(storiesByUser).filter(id => id !== currentUser.uid && friendIds.includes(id));
     const friendStoryGroups = allOtherUids.map(uid => ({ uid, stories: storiesByUser[uid] }));
 
     const hasMyStory = myStories.length > 0;
