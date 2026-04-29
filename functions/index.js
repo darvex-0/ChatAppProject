@@ -567,3 +567,49 @@ exports.checkScheduledMessages = onSchedule("every 1 minutes", async (event) => 
 
   await Promise.all(promises);
 });
+
+// --- Function 8: cleanupStories (Cron Job) ---
+// Deletes expired stories (older than 24h) every 6 hours
+exports.cleanupStories = onSchedule("every 6 hours", async (event) => {
+  const db = admin.firestore();
+  const STORY_EXPIRY_MS = 24 * 60 * 60 * 1000;
+  const cutoff = admin.firestore.Timestamp.fromMillis(Date.now() - STORY_EXPIRY_MS);
+
+  try {
+    const expiredStories = await db.collection("stories")
+      .where("createdAt", "<=", cutoff)
+      .limit(500)
+      .get();
+
+    if (expiredStories.empty) return;
+
+    const batch = db.batch();
+    expiredStories.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+
+    await batch.commit();
+    logger.info(`Cleanup: Deleted ${expiredStories.size} expired stories.`);
+  } catch (error) {
+    logger.error("Error cleaning up stories:", error);
+  }
+});
+
+// --- Function 9: onStoryDeleted ---
+// Cleans up associated media from Storage when a story document is deleted
+exports.onStoryDeleted = functions.firestore.onDocumentDeleted("stories/{storyId}", async (event) => {
+  const story = event.data.data();
+
+  if (story && (story.imageURL || story.videoURL)) {
+    try {
+      const mediaUrl = story.imageURL || story.videoURL;
+      const filePath = mediaUrl.split("/o/")[1].split("?alt=media")[0];
+      const decodedFilePath = decodeURIComponent(filePath);
+      const bucket = admin.storage().bucket();
+      logger.info(`Story Deleted: Removing file from Storage: ${decodedFilePath}`);
+      await bucket.file(decodedFilePath).delete();
+    } catch (err) {
+      logger.error("Failed to delete story media from storage:", err);
+    }
+  }
+});

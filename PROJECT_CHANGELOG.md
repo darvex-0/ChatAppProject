@@ -14,6 +14,10 @@
 - **Story Privacy Patch**: Fixed a vulnerability where stories were visible to all users globally. Story visibility is now strictly enforced; you will only see stories from users who are in your active conversation list (friends you have already messaged).
 
 **Performance & Optimization:**
+- **Story Bandwidth Optimization**: Completely rebuilt the story fetching engine. The client now intelligently chunks your active friend list and queries ONLY those specific users using `in` batches. This prevents downloading irrelevant stories globally, saving massive amounts of mobile bandwidth and battery.
+- **Story Auto-Cleanup Engine**: Implemented a "soft-cleanup" garbage collector in the client and a robust "robot" backend via Cloud Functions:
+  - **Scheduled Cleanup**: A new Cloud Function (`cleanupStories`) runs every 6 hours to purge all expired stories from the database globally.
+  - **Storage Purge**: Added a new trigger (`onStoryDeleted`) that automatically detects story deletions and permanently wipes the associated image/video files from Firebase Storage, preventing storage bloat.
 - **iPhone Geometry & VRAM Optimization**: Slashed 3D rendering polygon counts and particle budgets to prevent iOS WebGL Out-Of-Memory (OOM) crashes:
   - Reduced the `EarthGlobe` grid segments from 128x128 to 32x32/64x64.
   - Slashed `Stars` particle count from 10,000 to 3,000.
