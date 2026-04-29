@@ -15,28 +15,76 @@ export default function StoriesBar({ friendIds = [] }) {
     const [viewingStories, setViewingStories] = useState(null); // { userId, stories[] }
     const [showCreateModal, setShowCreateModal] = useState(false);
 
-    // Listen to all stories from friends + current user
+    // Listen to stories from friends + current user via chunked queries
+    const friendsKey = friendIds.sort().join(',');
+    
     useEffect(() => {
         if (!currentUser) return;
 
         const cutoff = new Date(Date.now() - STORY_EXPIRY_MS);
+        const targetUids = [...new Set([...friendIds, currentUser.uid])];
+        
+        if (targetUids.length === 0) return;
 
-        const q = query(
-            collection(db, 'stories'),
-            where('createdAt', '>', cutoff),
-            orderBy('createdAt', 'asc')
-        );
+        const chunkSize = 30;
+        const chunks = [];
+        for (let i = 0; i < targetUids.length; i += chunkSize) {
+            chunks.push(targetUids.slice(i, i + chunkSize));
+        }
 
-        const unsub = onSnapshot(q, (snapshot) => {
-            const allStories = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            setStories(allStories);
-        }, (err) => {
-            // Silently fail - stories are non-critical
-            console.warn('Stories listener error:', err);
+        const unsubs = [];
+        const storiesMap = new Map();
+
+        chunks.forEach((chunk, index) => {
+            const q = query(
+                collection(db, 'stories'),
+                where('uid', 'in', chunk)
+            );
+
+            const unsub = onSnapshot(q, async (snapshot) => {
+                let chunkStories = [];
+                const toDelete = [];
+                
+                snapshot.docs.forEach(d => {
+                    const data = d.data();
+                    const storyTime = data.createdAt?.toDate?.() || new Date();
+                    
+                    if (storyTime > cutoff) {
+                        chunkStories.push({ id: d.id, ...data });
+                    } else if (data.uid === currentUser.uid) {
+                        // Soft-cleanup: Delete our own expired stories
+                        toDelete.push(d.id);
+                    }
+                });
+                
+                storiesMap.set(index, chunkStories);
+                
+                const allStories = Array.from(storiesMap.values())
+                    .flat()
+                    .sort((a, b) => {
+                        const timeA = a.createdAt?.seconds || 0;
+                        const timeB = b.createdAt?.seconds || 0;
+                        return timeA - timeB; // Ascending order
+                    });
+                
+                setStories(allStories);
+
+                // Execute lazy deletion
+                if (toDelete.length > 0) {
+                    const { doc, deleteDoc } = await import('firebase/firestore');
+                    toDelete.forEach(id => {
+                        deleteDoc(doc(db, 'stories', id)).catch(() => {});
+                    });
+                }
+            }, (err) => {
+                console.warn('Stories chunk listener error:', err);
+            });
+            
+            unsubs.push(unsub);
         });
 
-        return () => unsub();
-    }, [currentUser]);
+        return () => unsubs.forEach(unsub => unsub());
+    }, [currentUser, friendsKey]);
 
     // Group stories by user
     const storiesByUser = stories.reduce((acc, story) => {
