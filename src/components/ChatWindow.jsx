@@ -188,8 +188,8 @@ export default function ChatWindow() {
                         const userDoc = await getDoc(doc(db, "users", uid));
                         if (userDoc.exists()) {
                             const userData = userDoc.data();
-                            name = userData.name || userData.email || "User";
-                            photo = userData.photoURL;
+                            name = userData.name || userData.displayName || userData.username || userData.email?.split('@')[0] || "User";
+                            photo = userData.photoURL || userData.profilePic || null;
                         }
                     }
                 }
@@ -819,7 +819,7 @@ export default function ChatWindow() {
             try {
                 const memberIds = chatInfo.members.filter(uid => uid !== currentUser.uid);
                 const promises = memberIds.map(uid =>
-                    getDoc(doc(db, 'users', uid)).then(snap => snap.exists() ? { uid, name: snap.data().name || snap.data().email?.split('@')[0] || 'User', photo: snap.data().photoURL || null } : null)
+                    getDoc(doc(db, 'users', uid)).then(snap => snap.exists() ? { uid, name: snap.data().name || snap.data().displayName || snap.data().username || snap.data().email?.split('@')[0] || 'User', photo: snap.data().photoURL || snap.data().profilePic || null } : null)
                 );
                 const members = (await Promise.all(promises)).filter(Boolean);
                 setGroupMembers(members);

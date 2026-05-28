@@ -23,8 +23,8 @@ function OnlineIndicator({ userId, onProfileUpdate }) {
                 // Notify parent of profile updates
                 if (onProfileUpdate) {
                     onProfileUpdate(userId, {
-                        name: data.name || data.email || "User",
-                        photo: data.photoURL
+                        name: data.name || data.displayName || data.username || data.email?.split('@')[0] || "User",
+                        photo: data.photoURL || data.profilePic || null
                     });
                 }
             }
@@ -202,8 +202,8 @@ export default function Sidebar() {
                                 const userSnap = await getDoc(userRef);
                                 if (userSnap.exists()) {
                                     const userData = userSnap.data();
-                                    chatName = userData.name || userData.email || "User";
-                                    chatPic = userData.photoURL;
+                                    chatName = userData.name || userData.displayName || userData.username || userData.email?.split('@')[0] || "User";
+                                    chatPic = userData.photoURL || userData.profilePic || null;
                                     userCache.current[friendId] = { name: chatName, photo: chatPic };
                                 } else {
                                     chatName = "Unknown User";

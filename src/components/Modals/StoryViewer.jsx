@@ -328,10 +328,10 @@ export default function StoryViewer({ uid, stories, onClose }) {
                                                     <img src={vd.photoURL || vd.photo} alt={vd.name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
                                                 ) : (
                                                     <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>
-                                                        {(vd.name || vd.email || 'U')[0].toUpperCase()}
+                                                        {(vd.name || vd.displayName || vd.username || vd.email?.split('@')[0] || 'U')[0].toUpperCase()}
                                                     </div>
                                                 )}
-                                                <span style={{ color: 'white', fontWeight: 500 }}>{vd.name || vd.email?.split('@')[0] || 'User'}</span>
+                                                <span style={{ color: 'white', fontWeight: 500 }}>{vd.name || vd.displayName || vd.username || vd.email?.split('@')[0] || 'User'}</span>
                                             </div>
                                             {timeString && <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{timeString}</span>}
                                         </div>

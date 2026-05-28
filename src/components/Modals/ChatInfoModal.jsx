@@ -184,8 +184,8 @@ export default function ChatInfoModal({ chatId, onClose }) {
     if (!chatData) return null;
 
     const isGroup = chatData.type === 'group';
-    const chatName = isGroup ? chatData.groupName : (members[0]?.name || members[0]?.email || "User");
-    const chatPhoto = isGroup ? chatData.groupImage : members[0]?.photoURL;
+    const chatName = isGroup ? chatData.groupName : (members[0]?.name || members[0]?.displayName || members[0]?.username || members[0]?.email?.split('@')[0] || "User");
+    const chatPhoto = isGroup ? chatData.groupImage : (members[0]?.photoURL || members[0]?.profilePic);
     const subtitle = isGroup ? `${members.length} members` : (members[0]?.email || "");
     const amIAdmin = chatData.admin?.includes(currentUser.uid);
 
@@ -237,40 +237,44 @@ export default function ChatInfoModal({ chatId, onClose }) {
                             <h4 style={{ color: '#6366f1', fontSize: '0.9rem', marginBottom: '0.75rem', paddingBottom: '0.25rem', borderBottom: '1px solid var(--border-color)' }}>Members</h4>
 
                             <div style={{ maxHeight: '220px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                {members.map(member => (
-                                    <div key={member.uid} className="member-item" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0' }}>
-                                        <img src={member.photoURL || `https://ui-avatars.com/api/?name=${member.name}&background=random`} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                                {members.map(member => {
+                                    const memberName = member.name || member.displayName || member.username || member.email?.split('@')[0] || "User";
+                                    const memberPhoto = member.photoURL || member.profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(memberName)}&background=random`;
+                                    return (
+                                        <div key={member.uid} className="member-item" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0' }}>
+                                            <img src={memberPhoto} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
 
-                                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                                            <div style={{ color: 'var(--app-text)', fontWeight: 500, display: 'flex', alignItems: 'center', fontSize: '0.9rem' }}>
-                                                {member.name || "User"}
-                                                {member.uid === currentUser.uid && <span style={{ color: 'var(--app-text-muted)', marginLeft: '4px', fontWeight: 400 }}>(You)</span>}
-                                                {member.isAdmin && <span style={{ color: 'var(--warning, #fbbf24)', fontSize: '0.7rem', border: '1px solid var(--warning, #fbbf24)', padding: '0 4px', borderRadius: '4px', marginLeft: '6px', lineHeight: 1 }}>ADMIN</span>}
+                                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                                <div style={{ color: 'var(--app-text)', fontWeight: 500, display: 'flex', alignItems: 'center', fontSize: '0.9rem' }}>
+                                                    {memberName}
+                                                    {member.uid === currentUser.uid && <span style={{ color: 'var(--app-text-muted)', marginLeft: '4px', fontWeight: 400 }}>(You)</span>}
+                                                    {member.isAdmin && <span style={{ color: 'var(--warning, #fbbf24)', fontSize: '0.7rem', border: '1px solid var(--warning, #fbbf24)', padding: '0 4px', borderRadius: '4px', marginLeft: '6px', lineHeight: 1 }}>ADMIN</span>}
+                                                </div>
+                                                <div style={{ color: 'var(--app-text-muted)', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.email}</div>
                                             </div>
-                                            <div style={{ color: 'var(--app-text-muted)', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.email}</div>
-                                        </div>
 
-                                        {/* Admin Actions */}
-                                        {amIAdmin && member.uid !== currentUser.uid && (
-                                            <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
-                                                {!member.isAdmin && (
+                                            {/* Admin Actions */}
+                                            {amIAdmin && member.uid !== currentUser.uid && (
+                                                <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
+                                                    {!member.isAdmin && (
+                                                        <button
+                                                            onClick={() => promoteMember(member.uid, memberName)}
+                                                            style={{ background: 'none', border: '1px solid var(--success, #10b981)', color: 'var(--success, #10b981)', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
+                                                        >
+                                                            Promote
+                                                        </button>
+                                                    )}
                                                     <button
-                                                        onClick={() => promoteMember(member.uid, member.name)}
-                                                        style={{ background: 'none', border: '1px solid var(--success, #10b981)', color: 'var(--success, #10b981)', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
+                                                        onClick={() => kickMember(member.uid, memberName)}
+                                                        style={{ background: 'none', border: '1px solid var(--danger)', color: 'var(--danger)', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
                                                     >
-                                                        Promote
+                                                        Kick
                                                     </button>
-                                                )}
-                                                <button
-                                                    onClick={() => kickMember(member.uid, member.name)}
-                                                    style={{ background: 'none', border: '1px solid var(--danger)', color: 'var(--danger)', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
-                                                >
-                                                    Kick
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}

@@ -324,7 +324,7 @@ function MessageItem({ msg, currentUser, chatInfo, chatId, initiateReply, initia
                             if (otherUid) {
                                 const userDoc = await getDoc(doc(db, "users", otherUid));
                                 if (userDoc.exists()) {
-                                    activeChatInfo = { name: userDoc.data().name || userDoc.data().email || "User", type: 'direct' };
+                                    activeChatInfo = { name: userDoc.data().name || userDoc.data().displayName || userDoc.data().username || userDoc.data().email?.split('@')[0] || "User", type: 'direct' };
                                 }
                             }
                         }

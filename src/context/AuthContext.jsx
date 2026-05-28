@@ -27,11 +27,15 @@ export function AuthProvider({ children }) {
             const user = result.user;
             const userRef = doc(db, "users", user.uid);
 
+            const fallbackName = user.displayName || user.email?.split('@')[0] || "User";
             await setDoc(userRef, {
-                username: user.displayName,
+                name: fallbackName,
+                displayName: fallbackName,
+                username: fallbackName,
                 email: user.email,
-                profilePic: user.photoURL,
-                lowerCaseName: user.displayName ? user.displayName.toLowerCase() : "", // Helper for search
+                photoURL: user.photoURL || null,
+                profilePic: user.photoURL || null,
+                lowerCaseName: fallbackName.toLowerCase(), // Helper for search
                 updatedAt: serverTimestamp()
             }, { merge: true });
 
