@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "chatapp-f20ea",
     "public": "dist",
     "ignore": [
       "firebase.json",
