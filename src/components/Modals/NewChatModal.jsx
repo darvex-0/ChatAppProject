@@ -17,14 +17,23 @@ export default function NewChatModal({ onClose }) {
             if (searchTerm.trim().length > 0) {
                 setLoading(true);
                 try {
-                    // 1. Search by Name (Exact Input)
+                    const lowerTerm = searchTerm.toLowerCase();
+
+                    // 1. Search by lowerCaseName (standard case-insensitive search)
+                    const lowerNameQuery = query(
+                        collection(db, "users"),
+                        where("lowerCaseName", ">=", lowerTerm),
+                        where("lowerCaseName", "<=", lowerTerm + '\uf8ff')
+                    );
+
+                    // 2. Search by Name (Exact Input) - legacy fallback
                     const nameQuery = query(
                         collection(db, "users"),
                         where("name", ">=", searchTerm),
                         where("name", "<=", searchTerm + '\uf8ff')
                     );
 
-                    // 2. Search by Name (Capitalized) - Simple case-insensitive fix
+                    // 3. Search by Name (Capitalized) - legacy fallback
                     const capitalizedTerm = searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1);
                     const capitalQuery = query(
                         collection(db, "users"),
@@ -32,14 +41,15 @@ export default function NewChatModal({ onClose }) {
                         where("name", "<=", capitalizedTerm + '\uf8ff')
                     );
 
-                    // 3. Search by Email
+                    // 4. Search by Email (Lowercase)
                     const emailQuery = query(
                         collection(db, "users"),
-                        where("email", ">=", searchTerm),
-                        where("email", "<=", searchTerm + '\uf8ff')
+                        where("email", ">=", lowerTerm),
+                        where("email", "<=", lowerTerm + '\uf8ff')
                     );
 
-                    const [nameSnapshot, capitalSnapshot, emailSnapshot] = await Promise.all([
+                    const [lowerNameSnapshot, nameSnapshot, capitalSnapshot, emailSnapshot] = await Promise.all([
+                        getDocs(lowerNameQuery),
                         getDocs(nameQuery),
                         getDocs(capitalQuery),
                         getDocs(emailQuery)
@@ -53,6 +63,7 @@ export default function NewChatModal({ onClose }) {
                         }
                     };
 
+                    lowerNameSnapshot.forEach(addToMap);
                     nameSnapshot.forEach(addToMap);
                     capitalSnapshot.forEach(addToMap);
                     emailSnapshot.forEach(addToMap);

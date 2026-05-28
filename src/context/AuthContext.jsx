@@ -7,7 +7,7 @@ import {
     signInWithPopup,
     signOut
 } from "firebase/auth";
-import { doc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 
 const AuthContext = createContext();
 
@@ -78,7 +78,28 @@ export function AuthProvider({ children }) {
                         set(userStatusRef, con);
 
                         // Sync to Firestore for UI
-                        updateDoc(doc(db, "users", user.uid), { online: true }).catch(e => console.log("Online update failed", e));
+                        const userRef = doc(db, "users", user.uid);
+                        getDoc(userRef).then((docSnap) => {
+                            if (!docSnap.exists()) {
+                                const fallbackName = user.displayName || user.email?.split('@')[0] || "User";
+                                setDoc(userRef, {
+                                    name: fallbackName,
+                                    displayName: fallbackName,
+                                    username: fallbackName,
+                                    email: user.email,
+                                    photoURL: user.photoURL || null,
+                                    profilePic: user.photoURL || null,
+                                    lowerCaseName: fallbackName.toLowerCase(),
+                                    online: true,
+                                    updatedAt: serverTimestamp()
+                                }, { merge: true }).catch(e => console.error("User doc creation failed", e));
+                            } else {
+                                updateDoc(userRef, { online: true }).catch(e => console.log("Online update failed", e));
+                            }
+                        }).catch(e => {
+                            console.error("Error checking user doc", e);
+                            updateDoc(userRef, { online: true }).catch(() => {});
+                        });
 
                         // Handle tab close/refresh to update Firestore immediately
                         const handleTabClose = () => {
