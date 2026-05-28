@@ -185,11 +185,12 @@ export default function Sidebar() {
                 // Archive Status Check (Don't filter here, just tag)
                 const isArchived = data.archivedBy && data.archivedBy.includes(currentUser.uid);
 
-                if (data.type === 'group') {
-                    chatName = data.groupName;
+                const isGroup = data.type === 'group' || !!data.groupName || (data.members && data.members.length > 2);
+                if (isGroup) {
+                    chatName = data.groupName || "Group";
                     chatPic = data.groupImage;
                 } else {
-                    friendId = data.members.find(id => id !== currentUser.uid);
+                    friendId = data.members?.find(id => id !== currentUser.uid) || null;
                     if (friendId) {
                         try {
                             if (userCache.current[friendId]) {
@@ -219,6 +220,7 @@ export default function Sidebar() {
                 return {
                     id: docSnapshot.id,
                     ...data,
+                    type: isGroup ? 'group' : (data.type || 'direct'),
                     displayName: chatName,
                     displayPic: chatPic,
                     friendId,
@@ -302,7 +304,7 @@ export default function Sidebar() {
     };
 
     const filteredChats = chats.filter(chat => {
-        const matchesSearch = chat.displayName.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSearch = (chat.displayName || 'Chat').toLowerCase().includes(searchQuery.toLowerCase());
         const matchesArchiveStatus = showArchived ? chat.isArchived : !chat.isArchived;
         return matchesSearch && matchesArchiveStatus;
     });

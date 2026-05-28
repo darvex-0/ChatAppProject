@@ -16,6 +16,7 @@ export default React.memo(function MessageInputArea({
     scheduledMessages, setShowScheduledList,
     setEditingScheduledMsg, setIsScheduleModalOpen,
     setShowPollCreator,
+    setShowGameLobby,
     mentionState, groupMembers, insertMention, setMentionState, mentionIndex, setMentionIndex,
     showEmojiPicker, setShowEmojiPicker, emojiPickerPos, isDraggingEmoji, setIsDraggingEmoji,
     emojiDragOffset, setEmojiPickerPos, onEmojiClick,
@@ -197,6 +198,22 @@ export default React.memo(function MessageInputArea({
                             style={{ width: 'auto', height: 'auto', border: 'none', background: 'transparent', padding: 0 }}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        </button>
+
+                        {/* Gamepad Button */}
+                        <button
+                            onClick={() => setShowGameLobby(true)}
+                            className="icon-btn"
+                            title="Play Game"
+                            style={{ width: 'auto', height: 'auto', border: 'none', background: 'transparent', padding: 0 }}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="6" y1="12" x2="10" y2="12"></line>
+                                <line x1="8" y1="10" x2="8" y2="14"></line>
+                                <line x1="15" y1="13" x2="15.01" y2="13"></line>
+                                <line x1="18" y1="11" x2="18.01" y2="11"></line>
+                                <rect x="2" y="6" width="20" height="12" rx="3"></rect>
+                            </svg>
                         </button>
 
                         {/* Mention Suggestions */}

@@ -2,38 +2,41 @@
 
 ## System Architecture Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                     CONNECTHUB CHAT APP                          │
 │                                                                   │
-│  Frontend (Web)              Backend (Cloud Functions)           │
-│  ═══════════════              ════════════════════════           │
+│  Frontend (React/Vite)       Backend & External Services         │
+│  ═════════════════════        ═════════════════════════          │
 │                                                                   │
-│  public/index.html       Firebase Cloud Functions               │
-│  - Chat UI               - onUserStatusChanged()                │
-│  - User Auth             - onMessageDeleted()                   │
-│  - Message Display       - sendPushNotification()               │
-│  - File Upload                                                   │
+│  Components              Firebase Cloud Functions               │
+│  - Chat UI & Themes      - onUserStatusChanged()                │
+│  - WebGL 3D Login        - onMessageDeleted()                   │
+│  - WebRTC Engine         - sendPushNotification()               │
+│  - Media Cropper/Editor  - cleanupStories() (Cron/6hrs)         │
+│                          - onStoryDeleted()                     │
+│  Service Worker          Local AI Server (FastAPI/Ollama)       │
+│  - Push Notifications    - Smart Replies, Rephrase, Summary     │
+│  - Background Sync       - Gemini API (Fallback)                │
+│                                                                   │
 │                          Firebase Services                       │
-│  public/firebase-       ┌──────────────────┐                   │
-│  messaging-sw.js        │ Firestore        │                   │
-│  - Push Notifications   │ - chats/*        │                   │
-│  - Background Sync      │ - users/*        │                   │
-│                         │ - messages/      │                   │
+│                         ┌──────────────────┐                   │
+│                         │ Firestore        │                   │
+│                         │ - chats, users   │                   │
+│                         │ - stories, calls │                   │
 │                         └──────────────────┘                   │
 │                         ┌──────────────────┐                   │
 │                         │ Realtime DB      │                   │
-│                         │ - status/*       │                   │
+│                         │ - status (online)│                   │
 │                         └──────────────────┘                   │
 │                         ┌──────────────────┐                   │
 │                         │ Cloud Storage    │                   │
-│                         │ - Files/Images   │                   │
-│                         │ - Audio Messages │                   │
+│                         │ - Media & Stories│                   │
 │                         └──────────────────┘                   │
 │                         ┌──────────────────┐                   │
-│                         │ FCM (Firebase    │                   │
-│                         │ Cloud Messaging) │                   │
-│                         │ - Push Notifs    │                   │
+│                         │ FCM / STUN / TURN│                   │
+│                         │ - Notifications  │                   │
+│                         │ - WebRTC Connect │                   │
 │                         └──────────────────┘                   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -352,16 +355,48 @@ Filter recipients (exclude sender)
 #### `chats/{chatId}/messages/{messageId}`
 ```json
 {
-  "type": "text | image | file | audio",
+  "type": "text | image | file | audio | video | poll",
   "sender": "uid",
   "senderName": "string",
-  "text": "string",                               // For text
-  "imageURL": "string (Cloud Storage)",       // For images
-  "fileURL": "string (Cloud Storage)",        // For files
-  "audioURL": "string (Cloud Storage)",       // For audio
+  "text": "string",
+  "imageURL": "string (Cloud Storage)",
+  "videoURL": "string (Cloud Storage)",
+  "audioURL": "string (Cloud Storage)",
+  "fileURL": "string (Cloud Storage)",
   "timestamp": "timestamp",
   "edited": "boolean",
-  "deletedBy": ["uid1", "uid2"]               // Soft delete tracking
+  "deletedBy": ["uid1", "uid2"],
+  "isStarred": "boolean",
+  "reactions": { "emoji": ["uid1"] },
+  "pollData": { "options": [], "anonymous": false },
+  "mentionMap": { "handle": "uid" }
+}
+```
+
+#### `stories/{storyId}`
+```json
+{
+  "userId": "uid",
+  "type": "image | video | text",
+  "contentUrl": "string",
+  "textContent": "string",
+  "backgroundColor": "string",
+  "timestamp": "timestamp",
+  "expiresAt": "timestamp (timestamp + 24h)",
+  "viewers": ["uid1", "uid2"]
+}
+```
+
+#### `callLogs/{logId}`
+```json
+{
+  "callerId": "uid",
+  "receiverId": "uid",
+  "type": "audio | video",
+  "status": "completed | missed | declined",
+  "duration": "number (seconds)",
+  "timestamp": "timestamp",
+  "dataUsage": "number (bytes)"
 }
 ```
 
@@ -419,36 +454,36 @@ Filter recipients (exclude sender)
 
 ## Key Features
 
-### 1. **Real-time Messaging**
-- Direct one-on-one chats
-- Group chats with multiple members
-- Real-time message synchronization
+### 1. **Real-time Messaging & Interactivity**
+- Direct and Group chats with real-time sync
+- Full Emoji Reactions and Message Pinning
+- Forwarding, Personal Notes, and Starred Messages
+- Advanced Polls with media support and anonymous voting
 
-### 2. **Media Support**
-- Image uploads with preview
-- File sharing
-- Audio message recording
+### 2. **Rich Media & Editing**
+- In-App Camera with Instant Video Notes
+- Image Cropping, Filtering, and Video Trimming (Client-side)
+- File sharing and Audio recording with drafts
 
-### 3. **Push Notifications**
-- FCM integration
-- Different formats for direct/group chats
-- Background message handling
+### 3. **Local AI Superpowers (Ollama + Gemini)**
+- Privacy-first AI Smart Replies (local LLM)
+- AI Message Rephrase and Chat Summarizer
+- @AI proactive chat assistance
 
-### 4. **User Presence**
-- Online/offline status
-- Last seen timestamp
-- Automatic status updates
+### 4. **WebRTC Calling & Stories**
+- 1-on-1 Audio/Video Calls (PWA Wake Lock, PiP, STUN/TURN)
+- Call History logging and management
+- 24hr Ephemeral Stories with privacy scopes and viewer tracking
 
-### 5. **Chat Management**
-- Archive chats
-- Search chats
-- Unread message badges
-- Message deletion with auto-cleanup
+### 5. **Push Notifications & Service Worker**
+- FCM integration for background sync
+- Call ringing notifications while app is closed
+- Offline caching and PWA installability
 
-### 6. **Service Worker**
-- Background message handling
-- Offline support
-- Cache management
+### 6. **User Presence & Management**
+- Online/offline status with auto-updates
+- Chat archiving, global search, and granular Notification Settings
+- Detailed User Profiles and mention mapping
 
 ---
 

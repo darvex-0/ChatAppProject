@@ -40,6 +40,13 @@ export function CallProvider({ children }) {
     const callDocUnsubscribeRef = useRef(null);
     const iceCandidatesUnsubscribeRef = useRef(null);
 
+    // Game WebRTC
+    const gamePeerConnectionRef = useRef(null);
+    const gameDataChannelRef = useRef(null);
+    const gameCallbacksRef = useRef({ onOpen: null, onMessage: null, onClose: null });
+    const gameIceUnsubscribeRef = useRef(null);
+    const gameDocUnsubscribeRef = useRef(null);
+
     // Ringtone
     const ringtoneRef = useRef(null);
 
@@ -370,6 +377,7 @@ export function CallProvider({ children }) {
             snapshot.docChanges().forEach(change => {
                 if (change.type === 'added' && callState === 'idle') {
                     const data = change.doc.data();
+                    if (data.type === 'game') return; // Ignore game WebRTC data sync signaling
                     console.log('Incoming call:', data);
 
                     setCallId(change.doc.id);
@@ -819,6 +827,183 @@ export function CallProvider({ children }) {
         }
     }, []);
 
+    // Game P2P Connection Handlers
+    const setupGameDataChannel = useCallback((channel) => {
+        channel.onopen = () => {
+            console.log('Game sync data channel is open');
+            gameCallbacksRef.current.onOpen?.();
+        };
+        channel.onclose = () => {
+            console.log('Game sync data channel is closed');
+            gameCallbacksRef.current.onClose?.();
+        };
+        channel.onerror = (err) => {
+            console.error('Game sync data channel error:', err);
+        };
+        channel.onmessage = (event) => {
+            try {
+                const payload = JSON.parse(event.data);
+                gameCallbacksRef.current.onMessage?.(payload);
+            } catch (e) {
+                console.error('Error parsing game sync payload:', e);
+            }
+        };
+    }, []);
+
+    const cleanupGameP2P = useCallback(() => {
+        console.log('Cleaning up Game P2P connection...');
+        if (gameDataChannelRef.current) {
+            try {
+                gameDataChannelRef.current.close();
+            } catch (e) {}
+            gameDataChannelRef.current = null;
+        }
+        if (gamePeerConnectionRef.current) {
+            try {
+                gamePeerConnectionRef.current.close();
+            } catch (e) {}
+            gamePeerConnectionRef.current = null;
+        }
+        if (gameIceUnsubscribeRef.current) {
+            gameIceUnsubscribeRef.current();
+            gameIceUnsubscribeRef.current = null;
+        }
+        if (gameDocUnsubscribeRef.current) {
+            gameDocUnsubscribeRef.current();
+            gameDocUnsubscribeRef.current = null;
+        }
+        gameCallbacksRef.current.onClose?.();
+    }, []);
+
+    const initiateGameP2P = useCallback(async (gameId, opponentId, isHost) => {
+        cleanupGameP2P();
+
+        console.log(`Initiating game WebRTC. Host: ${isHost}, Game ID: ${gameId}, Opponent ID: ${opponentId}`);
+        const signalingId = `game_${gameId}`;
+        const iceConfig = turnServersRef.current ? { iceServers: turnServersRef.current } : STUN_SERVERS;
+
+        const pc = new RTCPeerConnection(iceConfig);
+        gamePeerConnectionRef.current = pc;
+
+        pc.onicecandidate = async (event) => {
+            if (event.candidate) {
+                try {
+                    await addDoc(collection(db, 'calls', signalingId, 'iceCandidates'), {
+                        candidate: event.candidate.toJSON(),
+                        from: currentUser.uid
+                    });
+                } catch (e) {
+                    console.error('Error adding game ICE candidate:', e);
+                }
+            }
+        };
+
+        pc.onconnectionstatechange = () => {
+            console.log('Game P2P Connection State:', pc.connectionState);
+            if (pc.connectionState === 'failed') {
+                cleanupGameP2P();
+            }
+        };
+
+        if (isHost) {
+            // Host creates the data channel
+            const channel = pc.createDataChannel('game-sync');
+            gameDataChannelRef.current = channel;
+            setupGameDataChannel(channel);
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            const callData = {
+                callerId: currentUser.uid,
+                callerName: currentUser.displayName || 'Host',
+                callerPhoto: currentUser.photoURL || '',
+                receiverId: opponentId,
+                type: 'game',
+                status: 'offering',
+                offer: { type: offer.type, sdp: offer.sdp },
+                createdAt: serverTimestamp()
+            };
+            await setDoc(doc(db, 'calls', signalingId), callData);
+
+            // Listen for answer
+            gameDocUnsubscribeRef.current = onSnapshot(doc(db, 'calls', signalingId), async (snapshot) => {
+                const data = snapshot.data();
+                if (data && data.status === 'answered' && data.answer && pc.signalingState !== 'stable') {
+                    console.log('Game P2P: Answer received');
+                    await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                }
+            });
+        } else {
+            // Receiver handles data channel creation event
+            pc.ondatachannel = (event) => {
+                if (event.channel.label === 'game-sync') {
+                    console.log('Game P2P: Data channel received');
+                    gameDataChannelRef.current = event.channel;
+                    setupGameDataChannel(event.channel);
+                }
+            };
+
+            // Fetch the call doc to get the offer
+            const docRef = doc(db, 'calls', signalingId);
+            const callDoc = await getDoc(docRef);
+            if (!callDoc.exists()) {
+                console.error('Game call doc not found for signaling');
+                return;
+            }
+            const callData = callDoc.data();
+            if (callData.offer) {
+                await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+
+                await setDoc(docRef, {
+                    answer: { type: answer.type, sdp: answer.sdp },
+                    status: 'answered'
+                }, { merge: true });
+            }
+
+            // Listen for call updates in case it ends
+            gameDocUnsubscribeRef.current = onSnapshot(docRef, (snapshot) => {
+                const data = snapshot.data();
+                if (data && data.status === 'ended') {
+                    cleanupGameP2P();
+                }
+            });
+        }
+
+        // Listen for ICE candidates
+        gameIceUnsubscribeRef.current = onSnapshot(
+            collection(db, 'calls', signalingId, 'iceCandidates'),
+            (snapshot) => {
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === 'added') {
+                        const data = change.doc.data();
+                        if (data.from !== currentUser.uid && pc.remoteDescription) {
+                            pc.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(console.error);
+                        }
+                    }
+                });
+            }
+        );
+    }, [currentUser, setupGameDataChannel, cleanupGameP2P]);
+
+    const registerGameCallbacks = useCallback((onOpen, onMessage, onClose) => {
+        gameCallbacksRef.current = { onOpen, onMessage, onClose };
+    }, []);
+
+    const sendGameMove = useCallback((payload) => {
+        if (gameDataChannelRef.current && gameDataChannelRef.current.readyState === 'open') {
+            try {
+                gameDataChannelRef.current.send(JSON.stringify(payload));
+                return true;
+            } catch (e) {
+                console.error('Failed to send move via P2P channel:', e);
+            }
+        }
+        return false;
+    }, []);
+
     // Listen for call history
     useEffect(() => {
         if (!currentUser) return;
@@ -852,7 +1037,11 @@ export function CallProvider({ children }) {
             callDuration,
             callHistory,
             callInfoContact,
-            setCallInfoContact
+            setCallInfoContact,
+            initiateGameP2P,
+            cleanupGameP2P,
+            sendGameMove,
+            registerGameCallbacks
         }}>
             {children}
         </CallContext.Provider>

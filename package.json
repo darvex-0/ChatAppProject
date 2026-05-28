@@ -10,9 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@koa/router": "^15.5.0",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
+    "boardgame.io": "^0.50.2",
     "browser-image-compression": "^2.0.2",
+    "chess.js": "^1.4.0",
     "emoji-picker-react": "^4.17.2",
     "firebase": "^10.0.0",
     "lucide-react": "^0.574.0",

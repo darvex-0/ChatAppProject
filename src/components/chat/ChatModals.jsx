@@ -6,6 +6,7 @@ import MediaPreviewModal from '../Modals/MediaPreviewModal';
 import VideoRecorder from '../VideoRecorder';
 import MediaCamera from '../MediaCamera';
 import PollCreator from '../Modals/PollCreator';
+import GameLobbyModal from '../Modals/GameLobbyModal';
 
 export default React.memo(function ChatModals({
     chatId,
@@ -23,7 +24,8 @@ export default React.memo(function ChatModals({
     previewFile, setPreviewFile, handleMediaPreviewSend,
     showVideoRecorder, setShowVideoRecorder, sendVideoMessage,
     showMediaCamera, setShowMediaCamera, handleCameraCapture,
-    showPollCreator, setShowPollCreator, sendPoll
+    showPollCreator, setShowPollCreator, sendPoll,
+    showGameLobby, setShowGameLobby, groupMembers, chatInfo
 }) {
     return (
         <>
@@ -349,6 +351,16 @@ export default React.memo(function ChatModals({
                     chatId={chatId}
                     onClose={() => setShowPollCreator(false)}
                     onSubmit={sendPoll}
+                />
+            )}
+
+            {/* Game Lobby Modal */}
+            {showGameLobby && (
+                <GameLobbyModal
+                    chatId={chatId}
+                    chatInfo={chatInfo}
+                    groupMembers={groupMembers}
+                    onClose={() => setShowGameLobby(false)}
                 />
             )}
         </>

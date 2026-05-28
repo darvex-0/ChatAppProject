@@ -107,5 +107,18 @@ service cloud.firestore {
         (request.resource.data.diff(resource.data).affectedKeys().hasAny(['viewers', 'viewersInfo']))
       );
     }
+
+    // 8. GAMES COLLECTION
+    match /games/{gameId} {
+      // Allow read access to anyone in the associated chatId (for spectators).
+      allow read: if request.auth != null && 
+        request.auth.uid in get(/databases/$(database)/documents/chats/$(resource.data.chatId)).data.members;
+      
+      // Allow write access only to the specific UIDs listed in the players map.
+      allow create: if request.auth != null && 
+        request.auth.uid in get(/databases/$(database)/documents/chats/$(request.resource.data.chatId)).data.members;
+      allow update: if request.auth != null && request.auth.uid in resource.data.players;
+      allow delete: if request.auth != null && request.auth.uid in resource.data.players;
+    }
   }
 }

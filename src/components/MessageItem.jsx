@@ -2,10 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import EmojiPicker from 'emoji-picker-react';
 import { db } from '../services/firebase';
-import { collection, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDoc, doc, onSnapshot } from 'firebase/firestore';
 import { useUI } from '../context/UIContext';
 import PollMessage from './PollMessage';
 import UserProfileModal from './Modals/UserProfileModal';
+import { useGame } from '../context/GameContext';
 
 // Helper component for audio messages with duration display
 function AudioPlayer({ src }) {
@@ -194,7 +195,98 @@ function VideoPlayer({ src, thumbnailSrc, duration, isCircular = false, startTim
     );
 }
 
+function GameInviteCard({ gameId, gameType, text, senderId, currentUser, acceptGameInvite }) {
+    const [gameStatus, setGameStatus] = useState('waiting');
+    const [winnerId, setWinnerId] = useState(null);
+    const [players, setPlayers] = useState({});
+
+    useEffect(() => {
+        if (!gameId) return;
+        const unsub = onSnapshot(doc(db, 'games', gameId), (snap) => {
+            if (snap.exists()) {
+                const data = snap.data();
+                setGameStatus(data.status);
+                setWinnerId(data.winnerId);
+                setPlayers(data.players || {});
+            }
+        });
+        return () => unsub();
+    }, [gameId]);
+
+    const isMe = currentUser.uid === senderId;
+    const isPlayer = currentUser && Object.keys(players).includes(currentUser.uid);
+
+    return (
+        <div style={{
+            background: 'rgba(99, 102, 241, 0.1)',
+            border: '1px solid rgba(99, 102, 241, 0.3)',
+            borderRadius: '12px',
+            padding: '16px',
+            marginTop: '8px',
+            maxWidth: '300px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span style={{ fontSize: '1.5rem' }}>{gameType === 'chess' ? '♟️' : '🎲'}</span>
+                <strong style={{ fontSize: '1rem', color: '#818cf8' }}>
+                    {gameType === 'chess' ? 'Chess Match' : 'Ludo Match'}
+                </strong>
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--app-text, #f8fafc)', margin: '0 0 12px 0', lineHeight: 1.4 }}>
+                {text}
+            </p>
+            {gameStatus === 'waiting' && (
+                !isMe ? (
+                    <button
+                        onClick={() => acceptGameInvite(gameId)}
+                        style={{
+                            width: '100%',
+                            padding: '8px',
+                            background: '#6366f1',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'background 0.2s'
+                        }}
+                    >
+                        Accept & Play 🎮
+                    </button>
+                ) : (
+                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center' }}>
+                        Waiting for opponent...
+                    </div>
+                )
+            )}
+            {gameStatus === 'active' && (
+                <button
+                    onClick={() => acceptGameInvite(gameId)}
+                    style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#22c55e',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                    }}
+                >
+                    {isPlayer ? 'Join Game 🎮' : 'Spectate Game 👁️'}
+                </button>
+            )}
+            {gameStatus === 'finished' && (
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center', fontWeight: 500 }}>
+                    🏁 Match Finished
+                </div>
+            )}
+        </div>
+    );
+}
+
 function MessageItem({ msg, currentUser, chatInfo, chatId, initiateReply, initiateForward, addReaction, confirmDelete, initiateEdit, pinMessage, starMessage, highlightText }) {
+    const { acceptGameInvite } = useGame();
     const isMe = msg.sender === currentUser.uid;
     const [showOriginalSender, setShowOriginalSender] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -271,7 +363,7 @@ function MessageItem({ msg, currentUser, chatInfo, chatId, initiateReply, initia
         }
     };
 
-    if (msg.type === 'system') {
+    if (msg.type === 'system' || msg.type === 'game_finished') {
         return <div className="message system"><span>{msg.text.replace(currentUser.displayName, "You")}</span></div>;
     }
 
@@ -578,6 +670,16 @@ function MessageItem({ msg, currentUser, chatInfo, chatId, initiateReply, initia
                 )}
                 {msg.type === 'text' && <div>{renderText(msg.text) || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>(No content)</span>}</div>}
                 {msg.type === 'poll' && <PollMessage msg={msg} chatId={chatId} />}
+                {msg.type === 'game_invite' && (
+                    <GameInviteCard
+                        gameId={msg.gameId}
+                        gameType={msg.gameType}
+                        text={msg.text}
+                        senderId={msg.sender}
+                        currentUser={currentUser}
+                        acceptGameInvite={acceptGameInvite}
+                    />
+                )}
                 {msg.type === 'file' && (
                     <a href={msg.fileURL} target="_blank" className="file-attachment">
                         <div className="file-attachment-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg></div>

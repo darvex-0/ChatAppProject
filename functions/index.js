@@ -613,3 +613,54 @@ exports.onStoryDeleted = functions.firestore.onDocumentDeleted("stories/{storyId
     }
   }
 });
+
+// --- Function 10: onGameFinished ---
+// Automatically injects a system-style game finished message into chats/{chatId}/messages
+exports.onGameFinished = functions.firestore.onDocumentUpdated("games/{gameId}", async (event) => {
+  const beforeData = event.data.before.data();
+  const afterData = event.data.after.data();
+
+  if (beforeData && afterData && beforeData.status !== "finished" && afterData.status === "finished") {
+    const chatId = afterData.chatId;
+    const winnerId = afterData.winnerId;
+    const players = afterData.players || {};
+    const gameType = afterData.gameType || "game";
+
+    let text = `Game Over! The ${gameType.toUpperCase()} game has finished.`;
+    if (winnerId) {
+      const winnerName = players[winnerId]?.name || "Winner";
+      text = `Game Over! ${winnerName} won the ${gameType.toUpperCase()} game! 🏆`;
+    } else {
+      text = `Game Over! The ${gameType.toUpperCase()} game ended in a draw. 🤝`;
+    }
+
+    try {
+      // 1. Add message in the messages subcollection
+      const messagesRef = admin.firestore()
+        .collection("chats")
+        .doc(chatId)
+        .collection("messages");
+
+      await messagesRef.add({
+        sender: "system",
+        senderName: "System",
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        type: "game_finished",
+        text: text,
+        gameId: event.params.gameId,
+        gameType: gameType,
+        status: "sent"
+      });
+
+      // 2. Sync to Sidebar/Chat doc lastMessage
+      await admin.firestore().collection("chats").doc(chatId).update({
+        lastMessage: `🎮 ${text}`,
+        lastUpdate: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      logger.info(`onGameFinished: Synced finished message for game ${event.params.gameId} inside chat ${chatId}`);
+    } catch (err) {
+      logger.error(`onGameFinished failed for game ${event.params.gameId}:`, err);
+    }
+  }
+});

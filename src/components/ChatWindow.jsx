@@ -109,6 +109,9 @@ export default function ChatWindow() {
     // Poll State
     const [showPollCreator, setShowPollCreator] = useState(false);
 
+    // Game Lobby State
+    const [showGameLobby, setShowGameLobby] = useState(false);
+
     // Mention State
     const [mentionState, setMentionState] = useState(null); // { query: string } | null
     const [groupMembers, setGroupMembers] = useState([]); // [{ uid, name, photo }]
@@ -171,11 +174,12 @@ export default function ChatWindow() {
                 const data = chatDoc.data();
                 let name = "Chat";
                 let photo = "";
-                let type = data.type;
+                const isGroup = data.type === 'group' || !!data.groupName || (data.members && data.members.length > 2);
+                let type = isGroup ? 'group' : (data.type || 'direct');
                 let uid = null;
 
                 if (type === 'group') {
-                    name = data.groupName;
+                    name = data.groupName || "Group";
                     photo = data.groupImage;
                 } else {
                     uid = data.members?.find(uid => uid !== currentUser.uid);
@@ -1663,6 +1667,7 @@ export default function ChatWindow() {
                 scheduledMessages={scheduledMessages} setShowScheduledList={setShowScheduledList}
                 setEditingScheduledMsg={setEditingScheduledMsg} setIsScheduleModalOpen={setIsScheduleModalOpen}
                 setShowPollCreator={setShowPollCreator}
+                setShowGameLobby={setShowGameLobby}
                 mentionState={mentionState} groupMembers={groupMembers} insertMention={insertMention} setMentionState={setMentionState} mentionIndex={mentionIndex} setMentionIndex={setMentionIndex}
                 showEmojiPicker={showEmojiPicker} setShowEmojiPicker={setShowEmojiPicker} emojiPickerPos={emojiPickerPos} isDraggingEmoji={isDraggingEmoji} setIsDraggingEmoji={setIsDraggingEmoji}
                 emojiDragOffset={emojiDragOffset} setEmojiPickerPos={setEmojiPickerPos} onEmojiClick={onEmojiClick}
@@ -1689,6 +1694,7 @@ export default function ChatWindow() {
                 showVideoRecorder={showVideoRecorder} setShowVideoRecorder={setShowVideoRecorder} sendVideoMessage={sendVideoMessage}
                 showMediaCamera={showMediaCamera} setShowMediaCamera={setShowMediaCamera} handleCameraCapture={handleCameraCapture}
                 showPollCreator={showPollCreator} setShowPollCreator={setShowPollCreator} sendPoll={sendPoll}
+                showGameLobby={showGameLobby} setShowGameLobby={setShowGameLobby} groupMembers={groupMembers}
             />
         </div >
     );

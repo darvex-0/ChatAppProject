@@ -4,6 +4,24 @@
 # Project Changelog
 
 
+## Version 3.4 - Real-Time Multiplayer Games & Security Overhaul 🎮♟️
+**Date:** 28th May 2026
+
+**New Features:**
+- **In-App Multiplayer Games**: Integrated 1v1 Chess (powered by `chess.js` validation) and Ludo (powered by `boardgame.io` phase engine) directly into chat rooms.
+- **Gamepad Integration**: Added a gamepad icon next to the poll creator in the chat input area to launch the game lobby.
+- **Picture-in-Picture Overlay (PIP)**: Added a floating, draggable, and minimizable PIP overlay widget in the bottom-right corner to allow playing games while navigating other chats.
+- **Spectator Mode**: Allowed other chat room members to watch active games in real-time, locking out unauthorized moves via security rules.
+
+**Bug Fixes & Refinements:**
+- **Firestore Security Rules Splitting & Deployment**: Split the consolidated `allow write` rule for the `/games` collection into separate `allow create`, `allow update`, and `allow delete` rules. This resolves evaluation exceptions in the CEL rules engine when accessing `resource.data` on creation or `request.resource.data` on deletion. Deployed the compiled rules specifically to target project `chatapp-f20ea`.
+- **Voice Call Interference Filter**: Fixed a bug where WebRTC game sync offers (written to `/calls` with `status: 'offering'`) were picked up by the call listener, triggering unwanted incoming voice call dialogs during gameplay. Game offers of `type === 'game'` are now filtered out.
+- **Unified Group Chat Detection**: Standardized room detection logic across `Sidebar.jsx` and `ChatWindow.jsx`. A room is treated as a group if it has `type === 'group'`, `groupName`, or more than 2 members. This ensures group chats show in the sidebar and fetches members correctly for the game lobby select menu.
+- **1-on-1 Opponent Auto-Selection**: Bypassed validation alerts requesting opponent selection in 1v1 chats where the choose-opponent dropdown is hidden, defaulting automatically to the other participant.
+
+---
+
+
 ## Version 3.3 - WebGL Stability & Mobile Optimization 🛡️📱
 **Date:** 19th April 2026
 
