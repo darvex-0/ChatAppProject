@@ -595,10 +595,7 @@ export function CallProvider({ children }) {
         try {
             // Get receiver info
             const receiverDoc = await getDoc(doc(db, 'users', receiverUid));
-            if (!receiverDoc.exists()) {
-                return { success: false, error: 'User not found.' };
-            }
-            const receiverData = receiverDoc.data();
+            const receiverData = receiverDoc.exists() ? receiverDoc.data() : null;
 
             // Check if receiver is already in a call (or if we have a stuck session)
             const activeCallId = getCallId(currentUser.uid, receiverUid);
@@ -620,8 +617,8 @@ export function CallProvider({ children }) {
             callTypeRef.current = type;
             const remoteInfo = {
                 uid: receiverUid,
-                name: receiverData.name || 'User',
-                photo: receiverData.photoURL
+                name: receiverData?.name || receiverData?.displayName || receiverData?.username || 'User',
+                photo: receiverData?.photoURL || receiverData?.profilePic || null
             };
             setRemoteUser(remoteInfo);
             remoteUserRef.current = remoteInfo;

@@ -56,6 +56,26 @@ export function AuthProvider({ children }) {
             setLoading(false);
 
             if (user) {
+                const userRef = doc(db, "users", user.uid);
+                
+                // Check and initialize user document in Firestore immediately
+                getDoc(userRef).then((docSnap) => {
+                    if (!docSnap.exists()) {
+                        const fallbackName = user.displayName || user.email?.split('@')[0] || "User";
+                        setDoc(userRef, {
+                            name: fallbackName,
+                            displayName: fallbackName,
+                            username: fallbackName,
+                            email: user.email,
+                            photoURL: user.photoURL || null,
+                            profilePic: user.photoURL || null,
+                            lowerCaseName: fallbackName.toLowerCase(),
+                            online: true,
+                            updatedAt: serverTimestamp()
+                        }, { merge: true }).catch(e => console.error("User doc creation failed", e));
+                    }
+                }).catch(e => console.error("Error checking user doc on auth change", e));
+
                 // Presence Logic
                 const userStatusRef = ref(rtdb, '/status/' + user.uid);
                 const connectedRef = ref(rtdb, '.info/connected');
@@ -78,32 +98,11 @@ export function AuthProvider({ children }) {
                         set(userStatusRef, con);
 
                         // Sync to Firestore for UI
-                        const userRef = doc(db, "users", user.uid);
-                        getDoc(userRef).then((docSnap) => {
-                            if (!docSnap.exists()) {
-                                const fallbackName = user.displayName || user.email?.split('@')[0] || "User";
-                                setDoc(userRef, {
-                                    name: fallbackName,
-                                    displayName: fallbackName,
-                                    username: fallbackName,
-                                    email: user.email,
-                                    photoURL: user.photoURL || null,
-                                    profilePic: user.photoURL || null,
-                                    lowerCaseName: fallbackName.toLowerCase(),
-                                    online: true,
-                                    updatedAt: serverTimestamp()
-                                }, { merge: true }).catch(e => console.error("User doc creation failed", e));
-                            } else {
-                                updateDoc(userRef, { online: true }).catch(e => console.log("Online update failed", e));
-                            }
-                        }).catch(e => {
-                            console.error("Error checking user doc", e);
-                            updateDoc(userRef, { online: true }).catch(() => {});
-                        });
+                        updateDoc(userRef, { online: true }).catch(e => console.log("Online update failed", e));
 
                         // Handle tab close/refresh to update Firestore immediately
                         const handleTabClose = () => {
-                            updateDoc(doc(db, "users", user.uid), { online: false });
+                            updateDoc(userRef, { online: false });
                         };
                         window.addEventListener("beforeunload", handleTabClose);
 
@@ -111,7 +110,7 @@ export function AuthProvider({ children }) {
                             window.removeEventListener("beforeunload", handleTabClose);
                         };
                     } else {
-                        updateDoc(doc(db, "users", user.uid), { online: false }).catch(() => { });
+                        updateDoc(userRef, { online: false }).catch(() => { });
                     }
                 });
             }

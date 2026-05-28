@@ -206,7 +206,7 @@ export default function Sidebar() {
                                     chatPic = userData.photoURL || userData.profilePic || null;
                                     userCache.current[friendId] = { name: chatName, photo: chatPic };
                                 } else {
-                                    chatName = "Unknown User";
+                                    chatName = "User";
                                 }
                             }
                         } catch (e) {

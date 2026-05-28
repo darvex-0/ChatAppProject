@@ -190,6 +190,8 @@ export default function ChatWindow() {
                             const userData = userDoc.data();
                             name = userData.name || userData.displayName || userData.username || userData.email?.split('@')[0] || "User";
                             photo = userData.photoURL || userData.profilePic || null;
+                        } else {
+                            name = "User";
                         }
                     }
                 }
