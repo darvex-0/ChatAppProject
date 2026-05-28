@@ -158,6 +158,7 @@ export default function ChatWindow() {
         setInputText("");
         setDeleteMsgId(null);
         setChatInfo(null); // Clear chat info to prevent stale data
+        setGroupMembers([]); // Clear group members to prevent stale game lobby data
         setSmartReplies([]); // Clear smart replies
         setIsLoadingReplies(false);
         if (smartReplyDebounceRef.current) clearTimeout(smartReplyDebounceRef.current);
