@@ -5,7 +5,7 @@ import { lazy, Suspense, useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { messaging, db } from "./services/firebase";
 import { getToken, onMessage } from "firebase/messaging";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, arrayUnion } from "firebase/firestore";
 
 // --- CODE SPLITTING ---
 // React.lazy() tells Vite to create separate bundles for each component.
@@ -64,7 +64,8 @@ function FCMHandler() {
                     if (token) {
                         console.log("FCM Token:", token);
                         await setDoc(doc(db, "users", currentUser.uid), {
-                            fcmToken: token
+                            fcmToken: token,
+                            fcmTokens: arrayUnion(token)
                         }, { merge: true });
                     }
                 } catch (e) {

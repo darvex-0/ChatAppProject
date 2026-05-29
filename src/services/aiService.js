@@ -82,10 +82,20 @@ export async function fetchRephrase(text) {
             return data.rephrased || null;
         }
     } catch (e) {
-        console.log("Local Rephrase unavailable");
+        console.log("Local Rephrase unavailable, falling back to Gemini...");
     }
 
-    // Currently no cloud fallback for rephrase to save costs
+    // Layer 2: Cloud AI (Gemini via Firebase Cloud Functions)
+    try {
+        const genRephrase = httpsCallable(cloudFunctions, 'generateRephrase');
+        const result = await genRephrase({ text });
+        if (result.data && result.data.rephrased) {
+            return result.data.rephrased;
+        }
+    } catch (e) {
+        console.error("Gemini Rephrase failed:", e);
+    }
+
     return null;
 }
 
@@ -108,9 +118,19 @@ export async function fetchSummary(messages) {
             return data.summary || null;
         }
     } catch (e) {
-        console.log("Local Summarize unavailable");
+        console.log("Local Summarize unavailable, falling back to Gemini...");
     }
 
-    // Currently no cloud fallback for summary
+    // Layer 2: Cloud AI (Gemini via Firebase Cloud Functions)
+    try {
+        const genSummary = httpsCallable(cloudFunctions, 'generateSummary');
+        const result = await genSummary({ messages });
+        if (result.data && result.data.summary) {
+            return result.data.summary;
+        }
+    } catch (e) {
+        console.error("Gemini Summarize failed:", e);
+    }
+
     return null;
 }

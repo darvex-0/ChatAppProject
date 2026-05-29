@@ -509,6 +509,95 @@ exports.generateSmartReplies = onCall(
   }
 );
 
+// --- Function 11: generateRephrase (AI Rephrase) ---
+exports.generateRephrase = onCall(
+  { secrets: [geminiApiKey], timeoutSeconds: 30, maxInstances: 10 },
+  async (request) => {
+    // 1. Auth check
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "User must be logged in.");
+    }
+
+    const { text } = request.data;
+
+    // 2. Input validation
+    if (!text || typeof text !== "string" || text.trim().length === 0) {
+      throw new HttpsError("invalid-argument", "text is required.");
+    }
+
+    // 3. Truncate to avoid excessive token usage
+    const truncatedText = text.slice(0, 1000);
+
+    try {
+      const genAI = new GoogleGenerativeAI(geminiApiKey.value());
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash-lite",
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1024,
+        },
+        systemInstruction: `You are a professional assistant. Rephrase the input text to make it sound polished, professional, clear, and grammatically correct while keeping the original intent. Keep the same language. Do NOT add any preamble like "Here is the rephrased version:" or conversational introductory remarks. Return ONLY the final polished text.`,
+      });
+
+      const result = await model.generateContent(`Text to rephrase: "${truncatedText}"`);
+      const responseText = result.response.text();
+      logger.info("Gemini rephrase response:", responseText);
+
+      return { rephrased: responseText.trim() };
+
+    } catch (error) {
+      logger.error("Rephrase Error:", error.message || error);
+      throw new HttpsError("internal", "Failed to rephrase text.");
+    }
+  }
+);
+
+// --- Function 12: generateSummary (AI Summarize) ---
+exports.generateSummary = onCall(
+  { secrets: [geminiApiKey], timeoutSeconds: 30, maxInstances: 10 },
+  async (request) => {
+    // 1. Auth check
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "User must be logged in.");
+    }
+
+    const { messages } = request.data;
+
+    // 2. Input validation
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      throw new HttpsError("invalid-argument", "messages array is required.");
+    }
+
+    // 3. Format and truncate conversation transcript
+    const formattedTranscript = messages
+      .slice(-50) // limit to last 50 messages
+      .map(m => `${m.senderName}: ${(m.text || "").slice(0, 200)}`)
+      .join("\n");
+
+    try {
+      const genAI = new GoogleGenerativeAI(geminiApiKey.value());
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash-lite",
+        generationConfig: {
+          temperature: 0.5,
+          maxOutputTokens: 256,
+        },
+        systemInstruction: `You are a chat summarizer. Summarize the following conversation transcript in a concise summary of 1-3 sentences (maximum 40 words). Highlight the key topics discussed, decisions made, or next steps. Do not refer to yourself or write preambles.`,
+      });
+
+      const result = await model.generateContent(`Transcript:\n\n${formattedTranscript}`);
+      const responseText = result.response.text();
+      logger.info("Gemini summary response:", responseText);
+
+      return { summary: responseText.trim() };
+
+    } catch (error) {
+      logger.error("Summary Error:", error.message || error);
+      throw new HttpsError("internal", "Failed to generate summary.");
+    }
+  }
+);
+
 // --- Function 6: checkScheduledMessages (Cron Job) ---
 // Checks for pending scheduled messages every minute
 const { onSchedule } = require("firebase-functions/v2/scheduler");
