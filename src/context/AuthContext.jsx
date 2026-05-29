@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { auth, db, rtdb } from "../services/firebase";
-import { ref, onValue, onDisconnect, set, off } from "firebase/database";
+import { ref, onValue, onDisconnect, set, off, serverTimestamp as rtdbTimestamp } from "firebase/database";
 import {
     onAuthStateChanged,
     GoogleAuthProvider,
@@ -86,13 +86,13 @@ export function AuthProvider({ children }) {
                         const con = {
                             state: 'online',
                             online: true,
-                            last_changed: serverTimestamp()
+                            last_changed: rtdbTimestamp()
                         };
 
                         onDisconnect(userStatusRef).set({
                             state: 'offline',
                             online: false,
-                            last_changed: serverTimestamp()
+                            last_changed: rtdbTimestamp()
                         });
 
                         set(userStatusRef, con);
