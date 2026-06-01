@@ -256,28 +256,32 @@ export function GameProvider({ children }) {
             if (!snap.exists()) return;
             const data = snap.data();
 
-            const updatedPlayers = { ...data.players };
-            if (updatedPlayers[currentUser.uid]) {
-                updatedPlayers[currentUser.uid].accepted = true;
+            const isPlayer = currentUser && Object.keys(data.players || {}).includes(currentUser.uid);
+
+            if (isPlayer) {
+                const updatedPlayers = { ...data.players };
+                if (updatedPlayers[currentUser.uid]) {
+                    updatedPlayers[currentUser.uid].accepted = true;
+                }
+
+                // Check if everyone has accepted (supporting legacy data without accepted field)
+                const allAccepted = Object.values(updatedPlayers).every(p => p.accepted === undefined || p.accepted === true);
+
+                const updates = {
+                    players: updatedPlayers,
+                    lastMoveAt: serverTimestamp()
+                };
+                if (allAccepted) {
+                    updates.status = 'active';
+                }
+
+                await updateDoc(gameRef, updates);
             }
-
-            // Check if everyone has accepted (supporting legacy data without accepted field)
-            const allAccepted = Object.values(updatedPlayers).every(p => p.accepted === undefined || p.accepted === true);
-
-            const updates = {
-                players: updatedPlayers,
-                lastMoveAt: serverTimestamp()
-            };
-            if (allAccepted) {
-                updates.status = 'active';
-            }
-
-            await updateDoc(gameRef, updates);
 
             setActiveGameId(gameId);
             setGameState('maximized');
         } catch (e) {
-            console.error('Failed to accept game invite:', e);
+            console.error('Failed to accept game invite / spectate:', e);
         }
     }, [currentUser]);
 
