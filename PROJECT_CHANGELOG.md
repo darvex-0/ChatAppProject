@@ -9,11 +9,13 @@
 
 **New Features:**
 - **Fill Empty Slots with AI Bots**: Integrated a lobby toggle enabling hosts to populate empty player slots with intelligent AI bots.
+- **Dynamic Mid-Lobby Bot Replacements**: Enables hosts to instantly replace any non-responsive or declining "Pending" human invitee with a bot directly from the lobby wait panel to start the match immediately.
 - **Autonomous Bot Turns**: Implemented host-authoritative bot routines. The host's client runs bot rolls and moves automatically with realistic 1.2-second phase delays for natural gameplay.
 - **Smart AI Heuristics**: Created a bot decision engine prioritizing captures (Weight 100), exiting home (Weight 80), scoring goals (Weight 70), entering home stretch (Weight 60), and safe spot navigation (Weight 15).
 - **Flexible Solo & Mixed Matches**: Supports solo games against 1, 2, or 3 bots, as well as mixed multiplayer sessions (humans + bots).
 
 **Bug Fixes & Refinements:**
+- **Lobby Status Indicators**: Color-coded player tags dynamically highlight "Pending" vs "Playing" state for all participants in the lobby list.
 - **Solo Game Auto-Activation**: Bypasses player invite acceptance gates for games containing only the host and bots, allowing solo matches to start immediately upon creation.
 
 ---

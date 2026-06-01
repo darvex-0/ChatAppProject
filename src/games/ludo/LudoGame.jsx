@@ -105,7 +105,7 @@ const SAFE_SPOTS = [0, 8, 13, 21, 26, 34, 39, 47];
 
 export default function LudoGame() {
     const { currentUser } = useAuth();
-    const { activeGame, makeMove, quitGame, closeGame, isP2PActive } = useGame();
+    const { activeGame, makeMove, quitGame, closeGame, replacePlayerWithBot, isP2PActive } = useGame();
 
     const [isRolling, setIsRolling] = useState(false);
 
@@ -546,9 +546,9 @@ export default function LudoGame() {
                                        p.color === 'green' ? '#22c55e' :
                                        p.color === 'yellow' ? '#eab308' : '#3b82f6';
                     
-                    let statusLabel = 'Playing';
-                    let statusColor = '#94a3b8';
-                    let statusBg = 'rgba(255,255,255,0.05)';
+                    let statusLabel = p.accepted === false ? 'Pending' : 'Playing';
+                    let statusColor = p.accepted === false ? '#eab308' : '#94a3b8';
+                    let statusBg = p.accepted === false ? 'rgba(234, 179, 8, 0.08)' : 'rgba(255,255,255,0.05)';
 
                     if (p.conceded) {
                         statusLabel = `Left (${getOrdinal(p.rank)})`;
@@ -608,9 +608,33 @@ export default function LudoGame() {
                                 <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--app-text, #f8fafc)', maxWidth: '75px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {p.name}
                                 </span>
-                                <span style={{ fontSize: '0.6rem', fontWeight: 500, color: statusColor }}>
+                                <span style={{ fontSize: '0.6rem', fontWeight: 500, color: statusColor, display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     {statusLabel}
                                 </span>
+                                {gameStatus === 'waiting' && currentUser?.uid === activeGame?.hostId && p.accepted === false && !p.isBot && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (window.confirm(`Replace ${p.name} with an AI Bot?`)) {
+                                                replacePlayerWithBot(uid, p.color);
+                                            }
+                                        }}
+                                        style={{
+                                            marginTop: '3px',
+                                            padding: '2px 6px',
+                                            fontSize: '0.55rem',
+                                            borderRadius: '4px',
+                                            border: '1px solid rgba(99, 102, 241, 0.4)',
+                                            background: 'rgba(99, 102, 241, 0.15)',
+                                            color: '#818cf8',
+                                            cursor: 'pointer',
+                                            fontWeight: 600
+                                        }}
+                                        title="Replace with AI Bot"
+                                    >
+                                        🤖 Add Bot
+                                    </button>
+                                )}
                             </div>
                         </div>
                     );

@@ -388,6 +388,43 @@ export function GameProvider({ children }) {
         cleanupGameP2P();
     }, [cleanupGameP2P]);
 
+    // Replace a waiting player with a bot
+    const replacePlayerWithBot = useCallback(async (uid, color) => {
+        if (!activeGameId || !activeGame || !currentUser) return;
+
+        try {
+            const gameRef = doc(db, 'games', activeGameId);
+            const snap = await getDoc(gameRef);
+            if (!snap.exists()) return;
+            const data = snap.data();
+
+            if (currentUser.uid !== data.hostId) return;
+
+            const updatedPlayers = { ...data.players };
+            delete updatedPlayers[uid];
+
+            const botId = `bot_${color}`;
+            updatedPlayers[botId] = {
+                name: `Ludo Bot ${color.charAt(0).toUpperCase() + color.slice(1)}`,
+                photoURL: `https://ui-avatars.com/api/?name=Ludo+Bot&background=6366f1&color=ffffff`,
+                color: color,
+                accepted: true,
+                isBot: true
+            };
+
+            const allAccepted = Object.values(updatedPlayers).every(p => p.accepted === undefined || p.accepted === true);
+
+            await updateDoc(gameRef, {
+                players: updatedPlayers,
+                status: allAccepted ? 'active' : 'waiting',
+                lastMoveAt: serverTimestamp()
+            });
+        } catch (e) {
+            console.error('Failed to replace player with bot:', e);
+            throw e;
+        }
+    }, [activeGameId, activeGame, currentUser]);
+
     return (
         <GameContext.Provider value={{
             activeGameId,
@@ -400,6 +437,7 @@ export function GameProvider({ children }) {
             makeMove,
             quitGame,
             closeGame,
+            replacePlayerWithBot,
             setActiveGameId
         }}>
             {children}
