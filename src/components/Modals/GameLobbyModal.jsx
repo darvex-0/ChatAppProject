@@ -9,6 +9,7 @@ export default function GameLobbyModal({ onClose, groupMembers, chatInfo, chatId
     const [selectedOpponent, setSelectedOpponent] = useState(null);
     const [playerCount, setPlayerCount] = useState(2); // 2 | 3 | 4
     const [selectedOpponents, setSelectedOpponents] = useState([]); // Array of opponent objects
+    const [fillWithBots, setFillWithBots] = useState(false);
     const [isSending, setIsSending] = useState(false);
 
     // Resolve possible opponents:
@@ -31,12 +32,20 @@ export default function GameLobbyModal({ onClose, groupMembers, chatInfo, chatId
     const handleSendInvite = async () => {
         let opponentsToInvite = [];
 
-        if (selectedGame === 'ludo' && playerCount > 2) {
-            if (selectedOpponents.length !== playerCount - 1) {
-                alert(`Please select exactly ${playerCount - 1} opponents to play!`);
-                return;
+        if (selectedGame === 'ludo') {
+            if (fillWithBots) {
+                if (selectedOpponents.length > playerCount - 1) {
+                    alert(`You can select at most ${playerCount - 1} opponents.`);
+                    return;
+                }
+                opponentsToInvite = selectedOpponents;
+            } else {
+                if (selectedOpponents.length !== playerCount - 1) {
+                    alert(`Please select exactly ${playerCount - 1} opponents to play!`);
+                    return;
+                }
+                opponentsToInvite = selectedOpponents;
             }
-            opponentsToInvite = selectedOpponents;
         } else {
             const opponentUser = selectedOpponent || (opponents.length === 1 ? opponents[0] : null);
             if (!opponentUser) {
@@ -48,7 +57,7 @@ export default function GameLobbyModal({ onClose, groupMembers, chatInfo, chatId
 
         setIsSending(true);
         try {
-            await sendGameInvite(chatId, selectedGame, opponentsToInvite);
+            await sendGameInvite(chatId, selectedGame, opponentsToInvite, fillWithBots, playerCount);
             onClose();
         } catch (e) {
             console.error('Invite failed:', e);
@@ -73,6 +82,7 @@ export default function GameLobbyModal({ onClose, groupMembers, chatInfo, chatId
                             setPlayerCount(2);
                             setSelectedOpponents([]);
                             setSelectedOpponent(null);
+                            setFillWithBots(false);
                         }}
                         style={{
                             flex: 1,
@@ -96,6 +106,7 @@ export default function GameLobbyModal({ onClose, groupMembers, chatInfo, chatId
                             setPlayerCount(2);
                             setSelectedOpponents([]);
                             setSelectedOpponent(null);
+                            setFillWithBots(false);
                         }}
                         style={{
                             flex: 1,
@@ -114,15 +125,16 @@ export default function GameLobbyModal({ onClose, groupMembers, chatInfo, chatId
                     </div>
                 </div>
 
-                {/* Player Count Selection (Only for Ludo in group chats) */}
-                {selectedGame === 'ludo' && opponents.length > 1 && (
+                {/* Player Count Selection (Only for Ludo) */}
+                {selectedGame === 'ludo' && (
                     <div style={{ marginBottom: '1.5rem' }}>
                         <label style={{ display: 'block', color: 'var(--gray, #94a3b8)', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 600 }}>
                             Number of Players:
                         </label>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                             {[2, 3, 4].map(count => {
-                                const isDisabled = opponents.length < (count - 1);
+                                // If bots are enabled, they don't need group members to start
+                                const isDisabled = !fillWithBots && opponents.length < (count - 1);
                                 return (
                                     <button
                                         key={count}
@@ -153,71 +165,104 @@ export default function GameLobbyModal({ onClose, groupMembers, chatInfo, chatId
                     </div>
                 )}
 
+                {/* Bot Toggle (Only for Ludo) */}
+                {selectedGame === 'ludo' && (
+                    <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '8px', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+                        <input
+                            type="checkbox"
+                            id="fillWithBotsToggle"
+                            checked={fillWithBots}
+                            onChange={(e) => {
+                                setFillWithBots(e.target.checked);
+                                setSelectedOpponents([]);
+                                setSelectedOpponent(null);
+                            }}
+                            style={{
+                                accentColor: '#6366f1',
+                                width: '18px',
+                                height: '18px',
+                                cursor: 'pointer'
+                            }}
+                        />
+                        <label htmlFor="fillWithBotsToggle" style={{ color: 'var(--app-text, #f8fafc)', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            🤖 Fill empty slots with AI bots
+                        </label>
+                    </div>
+                )}
+
                 {/* Opponent Selection */}
-                {selectedGame === 'ludo' && playerCount > 2 ? (
+                {selectedGame === 'ludo' ? (
                     <div style={{ marginBottom: '1.5rem' }}>
                         <label style={{ display: 'block', color: 'var(--gray, #94a3b8)', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 600 }}>
-                            Select {playerCount - 1} Opponents:
+                            {fillWithBots ? `Select Opponents (Up to ${playerCount - 1}):` : `Select exactly ${playerCount - 1} Opponent(s):`}
                         </label>
-                        <div style={{
-                            maxHeight: '180px',
-                            overflowY: 'auto',
-                            background: 'rgba(255,255,255,0.02)',
-                            borderRadius: '8px',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            padding: '0.5rem'
-                        }}>
-                            {opponents.map(opp => {
-                                const isChecked = selectedOpponents.some(o => o.uid === opp.uid);
-                                return (
-                                    <label
-                                        key={opp.uid}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '0.75rem',
-                                            padding: '0.5rem',
-                                            cursor: 'pointer',
-                                            borderRadius: '6px',
-                                            background: isChecked ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                                            marginBottom: '4px',
-                                            transition: 'background 0.2s'
-                                        }}
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={isChecked}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    if (selectedOpponents.length >= playerCount - 1) {
-                                                        alert(`You can only select ${playerCount - 1} opponents for a ${playerCount}-player game.`);
-                                                        return;
-                                                    }
-                                                    setSelectedOpponents([...selectedOpponents, opp]);
-                                                } else {
-                                                    setSelectedOpponents(selectedOpponents.filter(o => o.uid !== opp.uid));
-                                                }
-                                            }}
+                        {opponents.length > 0 ? (
+                            <div style={{
+                                maxHeight: '180px',
+                                overflowY: 'auto',
+                                background: 'rgba(255,255,255,0.02)',
+                                borderRadius: '8px',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                padding: '0.5rem'
+                            }}>
+                                {opponents.map(opp => {
+                                    const isChecked = selectedOpponents.some(o => o.uid === opp.uid);
+                                    return (
+                                        <label
+                                            key={opp.uid}
                                             style={{
-                                                accentColor: '#6366f1',
-                                                width: '16px',
-                                                height: '16px',
-                                                cursor: 'pointer'
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.75rem',
+                                                padding: '0.5rem',
+                                                cursor: 'pointer',
+                                                borderRadius: '6px',
+                                                background: isChecked ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                                                marginBottom: '4px',
+                                                transition: 'background 0.2s'
                                             }}
-                                        />
-                                        <img
-                                            src={opp.photo || `https://ui-avatars.com/api/?name=${opp.name}`}
-                                            alt=""
-                                            style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
-                                        />
-                                        <span style={{ color: 'var(--app-text, #f8fafc)', fontSize: '0.9rem' }}>{opp.name}</span>
-                                    </label>
-                                );
-                            })}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--gray, #94a3b8)', marginTop: '0.25rem', textAlign: 'right' }}>
-                            Selected: {selectedOpponents.length} / {playerCount - 1}
-                        </div>
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={isChecked}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        if (selectedOpponents.length >= playerCount - 1) {
+                                                            alert(`You can only select ${playerCount - 1} opponents for a ${playerCount}-player game.`);
+                                                            return;
+                                                        }
+                                                        setSelectedOpponents([...selectedOpponents, opp]);
+                                                    } else {
+                                                        setSelectedOpponents(selectedOpponents.filter(o => o.uid !== opp.uid));
+                                                    }
+                                                }}
+                                                style={{
+                                                    accentColor: '#6366f1',
+                                                    width: '16px',
+                                                    height: '16px',
+                                                    cursor: 'pointer'
+                                                }}
+                                            />
+                                            <img
+                                                src={opp.photo || `https://ui-avatars.com/api/?name=${opp.name}`}
+                                                alt=""
+                                                style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
+                                            />
+                                            <span style={{ color: 'var(--app-text, #f8fafc)', fontSize: '0.9rem' }}>{opp.name}</span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', color: 'var(--gray, #94a3b8)', fontSize: '0.9rem', textAlign: 'center' }}>
+                                No other players available. {fillWithBots ? 'Game will start with AI bots.' : 'Enable AI bots or wait for members.'}
+                            </div>
+                        )}
+                        {opponents.length > 0 && (
+                            <div style={{ fontSize: '0.75rem', color: 'var(--gray, #94a3b8)', marginTop: '0.25rem', textAlign: 'right' }}>
+                                Selected: {selectedOpponents.length} / {playerCount - 1}
+                            </div>
+                        )}
                     </div>
                 ) : opponents.length > 1 ? (
                     <div style={{ marginBottom: '1.5rem' }}>
@@ -277,7 +322,7 @@ export default function GameLobbyModal({ onClose, groupMembers, chatInfo, chatId
                     </button>
                     <button
                         onClick={handleSendInvite}
-                        disabled={isSending || opponents.length === 0}
+                        disabled={isSending || (selectedGame !== 'ludo' && opponents.length === 0) || (selectedGame === 'ludo' && !fillWithBots && opponents.length === 0)}
                         className="modal-btn"
                         style={{
                             flex: 1,
@@ -286,9 +331,9 @@ export default function GameLobbyModal({ onClose, groupMembers, chatInfo, chatId
                             background: '#6366f1',
                             color: 'white',
                             border: 'none',
-                            cursor: opponents.length === 0 ? 'not-allowed' : 'pointer',
+                            cursor: (isSending || (selectedGame !== 'ludo' && opponents.length === 0) || (selectedGame === 'ludo' && !fillWithBots && opponents.length === 0)) ? 'not-allowed' : 'pointer',
                             fontWeight: 600,
-                            opacity: (isSending || opponents.length === 0) ? 0.6 : 1
+                            opacity: (isSending || (selectedGame !== 'ludo' && opponents.length === 0) || (selectedGame === 'ludo' && !fillWithBots && opponents.length === 0)) ? 0.6 : 1
                         }}
                     >
                         {isSending ? 'Sending...' : 'Invite & Play'}

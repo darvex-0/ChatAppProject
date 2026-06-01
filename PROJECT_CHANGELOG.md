@@ -4,6 +4,21 @@
 # Project Changelog
 
 
+## Version 3.6 - Ludo AI Bot Opponents & Automation 🤖🎲
+**Date:** 1st June 2026
+
+**New Features:**
+- **Fill Empty Slots with AI Bots**: Integrated a lobby toggle enabling hosts to populate empty player slots with intelligent AI bots.
+- **Autonomous Bot Turns**: Implemented host-authoritative bot routines. The host's client runs bot rolls and moves automatically with realistic 1.2-second phase delays for natural gameplay.
+- **Smart AI Heuristics**: Created a bot decision engine prioritizing captures (Weight 100), exiting home (Weight 80), scoring goals (Weight 70), entering home stretch (Weight 60), and safe spot navigation (Weight 15).
+- **Flexible Solo & Mixed Matches**: Supports solo games against 1, 2, or 3 bots, as well as mixed multiplayer sessions (humans + bots).
+
+**Bug Fixes & Refinements:**
+- **Solo Game Auto-Activation**: Bypasses player invite acceptance gates for games containing only the host and bots, allowing solo matches to start immediately upon creation.
+
+---
+
+
 ## Version 3.5 - Multi-Player Ludo & Lobby Expansion 🎲👥
 **Date:** 1st June 2026
 

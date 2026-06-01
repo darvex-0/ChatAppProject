@@ -213,19 +213,24 @@ export default function LudoGame() {
     };
 
     // Move Piece handler
-    const movePiece = (pieceIdx) => {
-        if (!isPlayer || !isMyTurn || !gameState.diceRolled || gameStatus !== 'active') return;
+    const movePiece = (pieceIdx, color = null, uid = null, diceVal = null) => {
+        const activeColor = color || playerColor;
+        const activeUid = uid || turnUid;
+        const dice = diceVal !== null ? diceVal : gameState.diceValue;
 
-        const dice = gameState.diceValue;
-        const pieces = [...gameState.pieces[playerColor]];
+        // If it's a bot's turn, we bypass the human player turn checks, but still check gameStatus
+        if (color === null && (!isPlayer || !isMyTurn || !gameState.diceRolled)) return;
+        if (gameStatus !== 'active') return;
+
+        const pieces = [...gameState.pieces[activeColor]];
         const piece = { ...pieces[pieceIdx] };
 
         if (piece.pos === 'home') {
             if (dice !== 6) return;
             piece.pos = 'track';
-            piece.step = getStartStep(playerColor, numPlayers);
+            piece.step = getStartStep(activeColor, numPlayers);
         } else if (piece.pos === 'track') {
-            const startStep = getStartStep(playerColor, numPlayers);
+            const startStep = getStartStep(activeColor, numPlayers);
 
             const relativeStep = (piece.step - startStep + 52) % 52;
             const nextRelative = relativeStep + dice;
@@ -253,13 +258,13 @@ export default function LudoGame() {
         playSound();
 
         // Check capturing
-        const nextPieces = { ...gameState.pieces, [playerColor]: pieces };
+        const nextPieces = { ...gameState.pieces, [activeColor]: pieces };
         let captured = false;
 
         if (piece.pos === 'track' && !SAFE_SPOTS.includes(piece.step)) {
-            Object.keys(nextPieces).forEach((color) => {
-                if (color === playerColor) return;
-                const otherPieces = [...(nextPieces[color] || [])];
+            Object.keys(nextPieces).forEach((col) => {
+                if (col === activeColor) return;
+                const otherPieces = [...(nextPieces[col] || [])];
                 let otherCaptured = false;
                 otherPieces.forEach((op, opIdx) => {
                     if (op.pos === 'track' && op.step === piece.step) {
@@ -269,7 +274,7 @@ export default function LudoGame() {
                     }
                 });
                 if (otherCaptured) {
-                    nextPieces[color] = otherPieces;
+                    nextPieces[col] = otherPieces;
                 }
             });
         }
@@ -289,7 +294,7 @@ export default function LudoGame() {
             playSound('win');
             
             updatedPlayers = { ...players };
-            const currentEntry = updatedPlayers[currentUser.uid];
+            const currentEntry = updatedPlayers[activeUid];
             if (currentEntry && !currentEntry.finished) {
                 const numFinished = Object.values(updatedPlayers).filter(p => p.finished).length;
                 currentEntry.finished = true;
@@ -306,7 +311,7 @@ export default function LudoGame() {
                     updatedPlayers[lastUid].rank = numFinished + 1;
                 }
                 const winnerEntry = Object.entries(updatedPlayers).find(([uid, p]) => p.rank === 1);
-                nextWinnerId = winnerEntry ? winnerEntry[0] : currentUser.uid;
+                nextWinnerId = winnerEntry ? winnerEntry[0] : activeUid;
             }
         }
 
@@ -321,13 +326,140 @@ export default function LudoGame() {
             makeMove(nextState, null, nextWinnerId, updatedPlayers);
         } else {
             const targetPlayers = updatedPlayers || players;
-            const nextTurnUid = getNextTurnUid(targetPlayers, currentUser.uid);
+            const nextTurnUid = getNextTurnUid(targetPlayers, activeUid);
             
             // If rolled a 6 or captured a piece (and hasn't finished!), they get another turn!
             const keepTurn = (dice === 6 || captured) && !allHome;
-            makeMove(nextState, keepTurn ? currentUser.uid : nextTurnUid, null, updatedPlayers);
+            makeMove(nextState, keepTurn ? activeUid : nextTurnUid, null, updatedPlayers);
         }
     };
+
+    // Bot move evaluator heuristic
+    const getBotBestMove = (color, pieces, dice) => {
+        const validMoves = [];
+        pieces.forEach((p, idx) => {
+            if (p.pos === 'home' && dice !== 6) return;
+            if (p.pos === 'goal') return;
+            if (p.pos === 'stretch' && p.step + dice > 5) return;
+
+            let score = 0;
+            const startStep = getStartStep(color, numPlayers);
+
+            // Predict its new position
+            let nextPos = p.pos;
+            let nextStep = p.step;
+            if (p.pos === 'home') {
+                nextPos = 'track';
+                nextStep = startStep;
+                score += 80; // Exiting home is high priority
+            } else if (p.pos === 'track') {
+                const relativeStep = (p.step - startStep + 52) % 52;
+                const nextRelative = relativeStep + dice;
+                if (nextRelative > 50) {
+                    nextPos = 'stretch';
+                    nextStep = nextRelative - 51;
+                    score += 60; // Entering home stretch is high priority
+                } else {
+                    nextStep = (p.step + dice) % 52;
+                    // Prefer general progress: weight by current step/distance traveled
+                    score += 10 + relativeStep;
+                }
+            } else if (p.pos === 'stretch') {
+                nextStep += dice;
+                if (nextStep === 5) {
+                    nextPos = 'goal';
+                    score += 70; // Scoring a goal is very high priority
+                } else {
+                    score += 30 + nextStep; // Advancing in home stretch
+                }
+            }
+
+            // Check if this move results in a capture
+            if (nextPos === 'track' && !SAFE_SPOTS.includes(nextStep)) {
+                let willCapture = false;
+                Object.keys(gameState.pieces).forEach((otherColor) => {
+                    if (otherColor === color) return;
+                    const otherPieces = gameState.pieces[otherColor] || [];
+                    otherPieces.forEach((op) => {
+                        if (op.pos === 'track' && op.step === nextStep) {
+                            willCapture = true;
+                        }
+                    });
+                });
+                if (willCapture) {
+                    score += 100; // Capture is highest priority
+                }
+            }
+
+            // Safe spot bonus
+            if (nextPos === 'track' && SAFE_SPOTS.includes(nextStep)) {
+                score += 15;
+            }
+
+            validMoves.push({ idx, score });
+        });
+
+        if (validMoves.length === 0) return -1;
+        validMoves.sort((a, b) => b.score - a.score);
+        return validMoves[0].idx;
+    };
+
+    // Effect driving the bot turns on the host client
+    useEffect(() => {
+        if (gameStatus !== 'active' || !turnUid || !currentUser || !activeGame) return;
+        
+        // Only the host runs the bot turns
+        if (currentUser.uid !== activeGame.hostId) return;
+
+        const activePlayer = players[turnUid];
+        if (!activePlayer || !activePlayer.isBot) return;
+
+        const botColor = activePlayer.color;
+        const botPieces = gameState.pieces[botColor] || [];
+
+        if (isRolling) return;
+
+        let botTimeout;
+
+        if (!gameState.diceRolled) {
+            // Dice not rolled yet - wait a bit and roll it
+            botTimeout = setTimeout(() => {
+                const value = Math.floor(Math.random() * 6) + 1;
+                
+                const nextState = {
+                    ...gameState,
+                    diceValue: value,
+                    diceRolled: true
+                };
+
+                const hasMoves = checkHasMoves(botPieces, value);
+                if (!hasMoves) {
+                    botTimeout = setTimeout(() => {
+                        const nextTurnUid = getNextTurnUid(players, turnUid);
+                        makeMove({
+                            ...nextState,
+                            diceRolled: false,
+                            diceValue: 0
+                        }, nextTurnUid);
+                    }, 1200);
+                } else {
+                    makeMove(nextState, turnUid);
+                }
+            }, 1200);
+        } else {
+            // Dice is rolled - select piece and move
+            botTimeout = setTimeout(() => {
+                const bestPieceIdx = getBotBestMove(botColor, botPieces, gameState.diceValue);
+                if (bestPieceIdx !== -1) {
+                    movePiece(bestPieceIdx, botColor, turnUid, gameState.diceValue);
+                }
+            }, 1200);
+        }
+
+        return () => {
+            if (botTimeout) clearTimeout(botTimeout);
+        };
+    }, [gameStatus, turnUid, activeGame?.hostId, currentUser?.uid, gameState.diceRolled, isRolling, players]);
 
     // Calculate absolute position on the grid
     const getPieceGridPos = (color, p, idx) => {

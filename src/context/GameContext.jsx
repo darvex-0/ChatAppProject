@@ -115,13 +115,13 @@ export function GameProvider({ children }) {
     };
 
     // Invite flow
-    const sendGameInvite = useCallback(async (chatId, gameType, opponentInput) => {
+    const sendGameInvite = useCallback(async (chatId, gameType, opponentInput, fillWithBots = false, requestedPlayerCount = 2) => {
         if (!currentUser) return null;
 
         try {
             const opponentsArray = Array.isArray(opponentInput) ? opponentInput : [opponentInput];
             const isChess = gameType === 'chess';
-            const playerCount = opponentsArray.length + 1;
+            const playerCount = isChess ? 2 : requestedPlayerCount;
 
             // Define player colors and roles
             const players = {
@@ -142,51 +142,39 @@ export function GameProvider({ children }) {
                     accepted: false
                 };
             } else {
-                if (playerCount === 2) {
-                    const opponent = opponentsArray[0];
-                    players[opponent.uid] = {
-                        name: opponent.name || opponent.displayName || 'Player 2',
-                        photoURL: opponent.photoURL || opponent.photo || '',
-                        color: 'blue',
-                        accepted: false
-                    };
-                } else if (playerCount === 3) {
-                    const opp1 = opponentsArray[0];
-                    const opp2 = opponentsArray[1];
-                    players[opp1.uid] = {
-                        name: opp1.name || opp1.displayName || 'Player 2',
-                        photoURL: opp1.photoURL || opp1.photo || '',
-                        color: 'green',
-                        accepted: false
-                    };
-                    players[opp2.uid] = {
-                        name: opp2.name || opp2.displayName || 'Player 3',
-                        photoURL: opp2.photoURL || opp2.photo || '',
-                        color: 'yellow',
-                        accepted: false
-                    };
-                } else if (playerCount === 4) {
-                    const opp1 = opponentsArray[0];
-                    const opp2 = opponentsArray[1];
-                    const opp3 = opponentsArray[2];
-                    players[opp1.uid] = {
-                        name: opp1.name || opp1.displayName || 'Player 2',
-                        photoURL: opp1.photoURL || opp1.photo || '',
-                        color: 'green',
-                        accepted: false
-                    };
-                    players[opp2.uid] = {
-                        name: opp2.name || opp2.displayName || 'Player 3',
-                        photoURL: opp2.photoURL || opp2.photo || '',
-                        color: 'yellow',
-                        accepted: false
-                    };
-                    players[opp3.uid] = {
-                        name: opp3.name || opp3.displayName || 'Player 4',
-                        photoURL: opp3.photoURL || opp3.photo || '',
-                        color: 'blue',
-                        accepted: false
-                    };
+                const ludoColors = playerCount === 2 
+                    ? ['red', 'blue'] 
+                    : (playerCount === 3 ? ['red', 'green', 'yellow'] : ['red', 'green', 'yellow', 'blue']);
+
+                let colorIndex = 1;
+                // Assign human opponents first
+                for (let i = 0; i < opponentsArray.length; i++) {
+                    const opponent = opponentsArray[i];
+                    if (colorIndex < ludoColors.length) {
+                        players[opponent.uid] = {
+                            name: opponent.name || opponent.displayName || `Player ${colorIndex + 1}`,
+                            photoURL: opponent.photoURL || opponent.photo || '',
+                            color: ludoColors[colorIndex],
+                            accepted: false
+                        };
+                        colorIndex++;
+                    }
+                }
+
+                // Fill remaining slots with bots
+                if (fillWithBots) {
+                    while (colorIndex < playerCount) {
+                        const botColor = ludoColors[colorIndex];
+                        const botId = `bot_${botColor}`;
+                        players[botId] = {
+                            name: `Ludo Bot ${botColor.charAt(0).toUpperCase() + botColor.slice(1)}`,
+                            photoURL: `https://ui-avatars.com/api/?name=Ludo+Bot&background=6366f1&color=ffffff`,
+                            color: botColor,
+                            accepted: true,
+                            isBot: true
+                        };
+                        colorIndex++;
+                    }
                 }
             }
 
@@ -194,13 +182,15 @@ export function GameProvider({ children }) {
                 ? { fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1' }
                 : { board: initLudoBoard(), diceRolled: false, diceValue: 0, pieces: initLudoPieces() };
 
+            const allAccepted = Object.values(players).every(p => p.accepted === undefined || p.accepted === true);
+
             // Create game document
             const gameRef = doc(collection(db, 'games'));
             try {
                 await setDoc(gameRef, {
                     chatId,
                     gameType,
-                    status: 'waiting',
+                    status: allAccepted ? 'active' : 'waiting',
                     players,
                     hostId: currentUser.uid,
                     turn: currentUser.uid,

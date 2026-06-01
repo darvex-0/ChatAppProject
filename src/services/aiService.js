@@ -9,7 +9,7 @@ import { generateSmartReplies as generateStaticReplies } from '../utils/smartRep
  * 3. Static Engine (Regex pattern matching)
  */
 
-const AI_BASE_URL = 'http://localhost:8000';
+const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL || 'http://localhost:8000';
 
 /**
  * Check if the local AI server is reachable
