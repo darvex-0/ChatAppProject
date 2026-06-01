@@ -59,17 +59,42 @@ const getHomeStretchCoords = (color, numPlayers) => {
 
 const getNextTurnUid = (players, currentUid) => {
     const colorOrder = ['red', 'green', 'yellow', 'blue'];
-    const activePlayers = Object.entries(players).map(([uid, p]) => ({
-        uid,
-        color: p.color
-    }));
-    activePlayers.sort((a, b) => colorOrder.indexOf(a.color) - colorOrder.indexOf(b.color));
-    const currentIndex = activePlayers.findIndex(p => p.uid === currentUid);
+    const eligiblePlayers = Object.entries(players)
+        .filter(([uid, p]) => !p.conceded && !p.finished)
+        .map(([uid, p]) => ({
+            uid,
+            color: p.color
+        }));
+
+    if (eligiblePlayers.length === 0) return currentUid;
+
+    eligiblePlayers.sort((a, b) => colorOrder.indexOf(a.color) - colorOrder.indexOf(b.color));
+
+    let currentIndex = eligiblePlayers.findIndex(p => p.uid === currentUid);
     if (currentIndex === -1) {
-        return activePlayers[0]?.uid || currentUid;
+        const fullPlayers = Object.entries(players).map(([uid, p]) => ({ uid, color: p.color }));
+        fullPlayers.sort((a, b) => colorOrder.indexOf(a.color) - colorOrder.indexOf(b.color));
+        const oldIndex = fullPlayers.findIndex(p => p.uid === currentUid);
+
+        for (let i = 1; i <= fullPlayers.length; i++) {
+            const nextIdx = (oldIndex + i) % fullPlayers.length;
+            const candidate = fullPlayers[nextIdx];
+            if (eligiblePlayers.some(p => p.uid === candidate.uid)) {
+                return candidate.uid;
+            }
+        }
+        return eligiblePlayers[0]?.uid || currentUid;
     }
-    const nextIndex = (currentIndex + 1) % activePlayers.length;
-    return activePlayers[nextIndex].uid;
+
+    const nextIndex = (currentIndex + 1) % eligiblePlayers.length;
+    return eligiblePlayers[nextIndex].uid;
+};
+
+const getOrdinal = (n) => {
+    if (!n) return '';
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
 };
 
 // Safe spot indices where tokens cannot be captured
@@ -253,9 +278,37 @@ export default function LudoGame() {
             playSound('capture');
         }
 
-        // Check Win Condition
+        // Check if current player has finished
         const allHome = pieces.every(p => p.pos === 'goal');
-        const nextWinnerId = allHome ? currentUser.uid : null;
+        
+        let nextWinnerId = null;
+        let updatedPlayers = null;
+        let isGameFinished = false;
+
+        if (allHome) {
+            playSound('win');
+            
+            updatedPlayers = { ...players };
+            const currentEntry = updatedPlayers[currentUser.uid];
+            if (currentEntry && !currentEntry.finished) {
+                const numFinished = Object.values(updatedPlayers).filter(p => p.finished).length;
+                currentEntry.finished = true;
+                currentEntry.rank = numFinished + 1;
+            }
+
+            const activePlayers = Object.entries(updatedPlayers).filter(([uid, p]) => !p.conceded && !p.finished);
+
+            if (activePlayers.length <= 1) {
+                isGameFinished = true;
+                if (activePlayers.length === 1) {
+                    const lastUid = activePlayers[0][0];
+                    const numFinished = Object.values(updatedPlayers).filter(p => p.finished).length;
+                    updatedPlayers[lastUid].rank = numFinished + 1;
+                }
+                const winnerEntry = Object.entries(updatedPlayers).find(([uid, p]) => p.rank === 1);
+                nextWinnerId = winnerEntry ? winnerEntry[0] : currentUser.uid;
+            }
+        }
 
         const nextState = {
             ...gameState,
@@ -264,14 +317,15 @@ export default function LudoGame() {
             diceValue: 0
         };
 
-        if (nextWinnerId) {
-            playSound('win');
-            makeMove(nextState, null, nextWinnerId);
+        if (isGameFinished) {
+            makeMove(nextState, null, nextWinnerId, updatedPlayers);
         } else {
-            const nextTurnUid = getNextTurnUid(players, currentUser.uid);
-            // If rolled a 6 or captured a piece, player gets another turn!
-            const keepTurn = (dice === 6 || captured);
-            makeMove(nextState, keepTurn ? currentUser.uid : nextTurnUid);
+            const targetPlayers = updatedPlayers || players;
+            const nextTurnUid = getNextTurnUid(targetPlayers, currentUser.uid);
+            
+            // If rolled a 6 or captured a piece (and hasn't finished!), they get another turn!
+            const keepTurn = (dice === 6 || captured) && !allHome;
+            makeMove(nextState, keepTurn ? currentUser.uid : nextTurnUid, null, updatedPlayers);
         }
     };
 
@@ -342,6 +396,93 @@ export default function LudoGame() {
                 >
                     ✕
                 </button>
+            </div>
+
+            {/* Players Panel */}
+            <div style={{
+                display: 'flex',
+                gap: '0.75rem',
+                justifyContent: 'center',
+                width: '100%',
+                maxWidth: '440px',
+                marginBottom: '1rem',
+                flexWrap: 'wrap'
+            }}>
+                {Object.entries(players).map(([uid, p]) => {
+                    const isTurn = gameStatus === 'active' && turnUid === uid;
+                    const borderRing = p.color === 'red' ? '#ef4444' :
+                                       p.color === 'green' ? '#22c55e' :
+                                       p.color === 'yellow' ? '#eab308' : '#3b82f6';
+                    
+                    let statusLabel = 'Playing';
+                    let statusColor = '#94a3b8';
+                    let statusBg = 'rgba(255,255,255,0.05)';
+
+                    if (p.conceded) {
+                        statusLabel = `Left (${getOrdinal(p.rank)})`;
+                        statusColor = '#f87171';
+                        statusBg = 'rgba(239, 68, 68, 0.1)';
+                    } else if (p.finished) {
+                        statusLabel = `🏆 ${getOrdinal(p.rank)}`;
+                        statusColor = '#fbbf24';
+                        statusBg = 'rgba(251, 191, 36, 0.15)';
+                    } else if (isTurn) {
+                        statusLabel = 'Active';
+                        statusColor = '#818cf8';
+                        statusBg = 'rgba(129, 140, 248, 0.15)';
+                    }
+
+                    return (
+                        <div
+                            key={uid}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '6px 10px',
+                                borderRadius: '20px',
+                                background: statusBg,
+                                border: `1.5px solid ${isTurn ? '#818cf8' : 'rgba(255,255,255,0.05)'}`,
+                                transition: 'all 0.25s ease',
+                                boxShadow: isTurn ? `0 0 10px rgba(129, 140, 248, 0.25)` : 'none'
+                            }}
+                        >
+                            <div style={{ position: 'relative' }}>
+                                <img
+                                    src={p.photoURL || `https://ui-avatars.com/api/?name=${p.name}`}
+                                    alt=""
+                                    style={{
+                                        width: '28px',
+                                        height: '28px',
+                                        borderRadius: '50%',
+                                        border: `2.5px solid ${borderRing}`,
+                                        objectFit: 'cover'
+                                    }}
+                                />
+                                {isTurn && (
+                                    <span style={{
+                                        position: 'absolute',
+                                        bottom: 0,
+                                        right: 0,
+                                        width: '8px',
+                                        height: '8px',
+                                        borderRadius: '50%',
+                                        background: '#22c55e',
+                                        border: '1.5px solid #1e293b'
+                                    }} />
+                                )}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--app-text, #f8fafc)', maxWidth: '75px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {p.name}
+                                </span>
+                                <span style={{ fontSize: '0.6rem', fontWeight: 500, color: statusColor }}>
+                                    {statusLabel}
+                                </span>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
 
             {/* Board representation */}
@@ -587,7 +728,11 @@ export default function LudoGame() {
 
                     <div style={{ flex: 1, paddingLeft: '0.5rem' }}>
                         <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>
-                            {gameStatus === 'active' ? (
+                            {players[currentUser.uid]?.conceded ? (
+                                <span style={{ color: '#f87171' }}>You Conceded ({getOrdinal(players[currentUser.uid].rank)} Place)</span>
+                            ) : players[currentUser.uid]?.finished ? (
+                                <span style={{ color: '#fbbf24' }}>You Finished ({getOrdinal(players[currentUser.uid].rank)} Place) 🏆</span>
+                            ) : gameStatus === 'active' ? (
                                 isMyTurn ? (
                                     <span style={{ color: '#818cf8' }}>Your Turn ({playerColor.toUpperCase()})</span>
                                 ) : (
@@ -602,14 +747,14 @@ export default function LudoGame() {
                             ) : 'Waiting to start...'}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px' }}>
-                            {gameStatus === 'active' && (
+                            {gameStatus === 'active' && !players[currentUser.uid]?.conceded && !players[currentUser.uid]?.finished && (
                                 gameState.diceRolled ? `Rolled a ${gameState.diceValue}. Select piece ${playerColor} to move.` : 'Roll the dice to start your turn.'
                             )}
                             {gameStatus === 'waiting' && 'Lobby waiting for all invitees to join.'}
                         </div>
                     </div>
 
-                    {isPlayer && gameStatus === 'active' && (
+                    {isPlayer && gameStatus === 'active' && !players[currentUser.uid]?.conceded && !players[currentUser.uid]?.finished && (
                         <button
                             onClick={() => {
                                 if (window.confirm('Concede match?')) {

@@ -286,7 +286,7 @@ export function GameProvider({ children }) {
     }, [currentUser]);
 
     // Perform game move
-    const makeMove = useCallback(async (newState, nextTurnUid = null, winnerId = null) => {
+    const makeMove = useCallback(async (newState, nextTurnUid = null, winnerId = null, updatedPlayers = null) => {
         if (!activeGameId || !activeGame) return;
 
         const playersKeys = Object.keys(activeGame.players);
@@ -322,6 +322,9 @@ export function GameProvider({ children }) {
                 turn: turn,
                 lastMoveAt: serverTimestamp()
             };
+            if (updatedPlayers) {
+                updates.players = updatedPlayers;
+            }
             if (winnerId) {
                 updates.status = 'finished';
                 updates.winnerId = winnerId;
@@ -335,20 +338,55 @@ export function GameProvider({ children }) {
     // Quit/Concede
     const quitGame = useCallback(async () => {
         if (!activeGameId || !activeGame || !currentUser) return;
-        
-        const playersKeys = Object.keys(activeGame.players);
-        const opponentUid = playersKeys.find(uid => uid !== currentUser.uid);
-        
+
         try {
             const gameRef = doc(db, 'games', activeGameId);
-            await updateDoc(gameRef, {
-                status: 'finished',
-                winnerId: opponentUid || null,
+            const snap = await getDoc(gameRef);
+            if (!snap.exists()) return;
+            const data = snap.data();
+
+            const updatedPlayers = { ...data.players };
+            const playerEntry = updatedPlayers[currentUser.uid];
+            if (!playerEntry || playerEntry.conceded || playerEntry.finished) return;
+
+            const N = Object.keys(updatedPlayers).length;
+            const numConceded = Object.values(updatedPlayers).filter(p => p.conceded).length;
+
+            playerEntry.conceded = true;
+            playerEntry.rank = N - numConceded;
+
+            const activePlayers = Object.entries(updatedPlayers).filter(([uid, p]) => !p.conceded && !p.finished);
+
+            const updates = {
+                players: updatedPlayers,
                 lastMoveAt: serverTimestamp()
-            });
-            setActiveGameId(null);
-            setGameState('closed');
-            cleanupGameP2P();
+            };
+
+            let shouldClose = true; // Always close locally for the conceding player
+
+            if (activePlayers.length <= 1) {
+                if (activePlayers.length === 1) {
+                    const lastUid = activePlayers[0][0];
+                    const numFinished = Object.values(updatedPlayers).filter(p => p.finished).length;
+                    updatedPlayers[lastUid].rank = numFinished + 1;
+                }
+                
+                updates.status = 'finished';
+                const winnerEntry = Object.entries(updatedPlayers).find(([uid, p]) => p.rank === 1);
+                updates.winnerId = winnerEntry ? winnerEntry[0] : currentUser.uid;
+            } else {
+                if (data.turn === currentUser.uid) {
+                    updates.turn = getNextTurnUid(updatedPlayers, currentUser.uid);
+                }
+            }
+
+            await updateDoc(gameRef, updates);
+
+            if (shouldClose) {
+                setActiveGameId(null);
+                setGameState('closed');
+                cleanupGameP2P();
+            }
         } catch (e) {
             console.error('Failed to concede game:', e);
         }
@@ -401,15 +439,33 @@ function initLudoPieces() {
 
 function getNextTurnUid(players, currentUid) {
     const colorOrder = ['red', 'green', 'yellow', 'blue'];
-    const activePlayers = Object.entries(players).map(([uid, p]) => ({
-        uid,
-        color: p.color
-    }));
-    activePlayers.sort((a, b) => colorOrder.indexOf(a.color) - colorOrder.indexOf(b.color));
-    const currentIndex = activePlayers.findIndex(p => p.uid === currentUid);
+    const eligiblePlayers = Object.entries(players)
+        .filter(([uid, p]) => !p.conceded && !p.finished)
+        .map(([uid, p]) => ({
+            uid,
+            color: p.color
+        }));
+
+    if (eligiblePlayers.length === 0) return currentUid;
+
+    eligiblePlayers.sort((a, b) => colorOrder.indexOf(a.color) - colorOrder.indexOf(b.color));
+
+    let currentIndex = eligiblePlayers.findIndex(p => p.uid === currentUid);
     if (currentIndex === -1) {
-        return activePlayers[0]?.uid || currentUid;
+        const fullPlayers = Object.entries(players).map(([uid, p]) => ({ uid, color: p.color }));
+        fullPlayers.sort((a, b) => colorOrder.indexOf(a.color) - colorOrder.indexOf(b.color));
+        const oldIndex = fullPlayers.findIndex(p => p.uid === currentUid);
+
+        for (let i = 1; i <= fullPlayers.length; i++) {
+            const nextIdx = (oldIndex + i) % fullPlayers.length;
+            const candidate = fullPlayers[nextIdx];
+            if (eligiblePlayers.some(p => p.uid === candidate.uid)) {
+                return candidate.uid;
+            }
+        }
+        return eligiblePlayers[0]?.uid || currentUid;
     }
-    const nextIndex = (currentIndex + 1) % activePlayers.length;
-    return activePlayers[nextIndex].uid;
+
+    const nextIndex = (currentIndex + 1) % eligiblePlayers.length;
+    return eligiblePlayers[nextIndex].uid;
 }
