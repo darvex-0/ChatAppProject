@@ -1,5 +1,4 @@
 import React from 'react';
-import { Menu, Globe } from 'lucide-react';
 
 const GoogleIcon = () => (
     <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -24,7 +23,7 @@ const GoogleIcon = () => (
 
 const LoginCard = ({ onLogin }) => {
     return (
-        <div className="relative w-full max-w-[360px] md:max-w-[480px] min-h-[480px] md:min-h-[500px] h-auto md:h-[85vh] flex items-center justify-center mx-auto my-8 md:my-0">
+        <div className="relative w-full max-w-[360px] md:max-w-[480px] min-h-[380px] md:min-h-[450px] h-auto md:h-[65vh] flex items-center justify-center mx-auto my-8 md:my-0">
             {/* 
         Mobile Background: Standard rounded glass card
       */}
@@ -54,22 +53,12 @@ const LoginCard = ({ onLogin }) => {
             />
 
             {/* Content Layer */}
-            <div className="relative z-10 flex flex-col items-center justify-between w-full h-full p-6 md:p-8 pt-10 md:pt-12 text-white">
-
-                {/* Top Controls */}
-                <div className="absolute top-6 right-6 flex gap-6 text-gray-400">
-                    <div className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors group">
-                        <Globe className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-                        <span className="text-sm font-light">EN</span>
-                        <span className="text-[10px]">▼</span>
-                    </div>
-                    <Menu className="w-6 h-6 cursor-pointer hover:text-white transition-colors" />
-                </div>
+            <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-6 md:p-8 text-white">
 
                 {/* Middle Content */}
-                <div className="flex-1 flex flex-col items-center justify-center w-full mt-10">
+                <div className="flex flex-col items-center justify-center w-full my-auto">
 
-                    <h2 className="text-2xl font-semibold mb-8 text-center text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">
+                    <h2 className="text-3xl font-semibold mb-10 text-center text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300">
                         Welcome Back
                     </h2>
 
@@ -78,26 +67,17 @@ const LoginCard = ({ onLogin }) => {
                         <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full blur opacity-40 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
                         <button
                             onClick={onLogin}
-                            className="relative w-full px-8 py-4 bg-white rounded-full text-gray-900 font-medium text-lg flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all active:scale-95"
+                            className="relative w-full px-8 py-4 bg-white rounded-full text-gray-900 font-semibold text-lg flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all active:scale-98"
                         >
                             <GoogleIcon />
                             Login with Google
                         </button>
                     </div>
 
-                    <div className="mt-12 text-center space-y-4">
-                        <p className="text-gray-400 font-light text-sm">
-                            Don't have an account? <a href="#" className="text-white font-medium hover:underline ml-1">Sign Up</a>
-                        </p>
-                        <a href="#" className="block text-xs text-gray-500 hover:text-white transition-colors">
-                            Forgot password?
-                        </a>
-                    </div>
-
                 </div>
 
                 {/* Footer info or decorative elements */}
-                <div className="w-full flex justify-center pb-6 opacity-30">
+                <div className="w-full flex justify-center mt-10 opacity-30">
                     <div className="w-16 h-1 bg-gradient-to-r from-transparent via-white to-transparent rounded-full"></div>
                 </div>
             </div>
