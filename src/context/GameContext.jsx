@@ -89,10 +89,10 @@ export function GameProvider({ children }) {
                 setActiveGame({ id: snapshot.id, ...data });
             }
 
-            // Automate WebRTC connection if game turns active and user is a player
+            // Automate WebRTC connection if game turns active and user is a player (Only for 2-player games)
             if (data.status === 'active' && currentUser) {
                 const uids = Object.keys(data.players || {});
-                if (uids.includes(currentUser.uid)) {
+                if (uids.length === 2 && uids.includes(currentUser.uid)) {
                     const opponentId = uids.find(uid => uid !== currentUser.uid);
                     if (opponentId && !gameDataChannelRefExists()) {
                         const isHost = currentUser.uid === data.hostId;
@@ -115,24 +115,80 @@ export function GameProvider({ children }) {
     };
 
     // Invite flow
-    const sendGameInvite = useCallback(async (chatId, gameType, opponent) => {
+    const sendGameInvite = useCallback(async (chatId, gameType, opponentInput) => {
         if (!currentUser) return null;
 
         try {
-            // Define player colors and roles
+            const opponentsArray = Array.isArray(opponentInput) ? opponentInput : [opponentInput];
             const isChess = gameType === 'chess';
+            const playerCount = opponentsArray.length + 1;
+
+            // Define player colors and roles
             const players = {
                 [currentUser.uid]: {
                     name: currentUser.displayName || 'Player 1',
                     photoURL: currentUser.photoURL || '',
-                    color: isChess ? 'white' : 'red'
-                },
-                [opponent.uid]: {
-                    name: opponent.name || opponent.displayName || 'Player 2',
-                    photoURL: opponent.photoURL || opponent.photo || '',
-                    color: isChess ? 'black' : 'blue'
+                    color: isChess ? 'white' : 'red',
+                    accepted: true
                 }
             };
+
+            if (isChess) {
+                const opponent = opponentsArray[0];
+                players[opponent.uid] = {
+                    name: opponent.name || opponent.displayName || 'Player 2',
+                    photoURL: opponent.photoURL || opponent.photo || '',
+                    color: 'black',
+                    accepted: false
+                };
+            } else {
+                if (playerCount === 2) {
+                    const opponent = opponentsArray[0];
+                    players[opponent.uid] = {
+                        name: opponent.name || opponent.displayName || 'Player 2',
+                        photoURL: opponent.photoURL || opponent.photo || '',
+                        color: 'blue',
+                        accepted: false
+                    };
+                } else if (playerCount === 3) {
+                    const opp1 = opponentsArray[0];
+                    const opp2 = opponentsArray[1];
+                    players[opp1.uid] = {
+                        name: opp1.name || opp1.displayName || 'Player 2',
+                        photoURL: opp1.photoURL || opp1.photo || '',
+                        color: 'green',
+                        accepted: false
+                    };
+                    players[opp2.uid] = {
+                        name: opp2.name || opp2.displayName || 'Player 3',
+                        photoURL: opp2.photoURL || opp2.photo || '',
+                        color: 'yellow',
+                        accepted: false
+                    };
+                } else if (playerCount === 4) {
+                    const opp1 = opponentsArray[0];
+                    const opp2 = opponentsArray[1];
+                    const opp3 = opponentsArray[2];
+                    players[opp1.uid] = {
+                        name: opp1.name || opp1.displayName || 'Player 2',
+                        photoURL: opp1.photoURL || opp1.photo || '',
+                        color: 'green',
+                        accepted: false
+                    };
+                    players[opp2.uid] = {
+                        name: opp2.name || opp2.displayName || 'Player 3',
+                        photoURL: opp2.photoURL || opp2.photo || '',
+                        color: 'yellow',
+                        accepted: false
+                    };
+                    players[opp3.uid] = {
+                        name: opp3.name || opp3.displayName || 'Player 4',
+                        photoURL: opp3.photoURL || opp3.photo || '',
+                        color: 'blue',
+                        accepted: false
+                    };
+                }
+            }
 
             const initialGameState = isChess
                 ? { fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1' }
@@ -158,13 +214,18 @@ export function GameProvider({ children }) {
                 throw new Error('Game document creation failed: ' + err.message);
             }
 
+            let inviteText = `Invited you to play ${isChess ? 'Chess' : 'Ludo'} 🎮`;
+            if (!isChess && playerCount > 2) {
+                inviteText = `Invited you to play ${playerCount}-Player Ludo 🎲`;
+            }
+
             // Post invite message to target chat
             const inviteMsg = {
                 sender: currentUser.uid,
                 senderName: currentUser.displayName || 'User',
                 timestamp: serverTimestamp(),
                 type: 'game_invite',
-                text: `Invited you to play ${isChess ? 'Chess' : 'Ludo'} 🎮`,
+                text: inviteText,
                 gameId: gameRef.id,
                 gameType,
                 status: 'sent'
@@ -191,25 +252,49 @@ export function GameProvider({ children }) {
     const acceptGameInvite = useCallback(async (gameId) => {
         try {
             const gameRef = doc(db, 'games', gameId);
-            await updateDoc(gameRef, {
-                status: 'active',
+            const snap = await getDoc(gameRef);
+            if (!snap.exists()) return;
+            const data = snap.data();
+
+            const updatedPlayers = { ...data.players };
+            if (updatedPlayers[currentUser.uid]) {
+                updatedPlayers[currentUser.uid].accepted = true;
+            }
+
+            // Check if everyone has accepted (supporting legacy data without accepted field)
+            const allAccepted = Object.values(updatedPlayers).every(p => p.accepted === undefined || p.accepted === true);
+
+            const updates = {
+                players: updatedPlayers,
                 lastMoveAt: serverTimestamp()
-            });
+            };
+            if (allAccepted) {
+                updates.status = 'active';
+            }
+
+            await updateDoc(gameRef, updates);
 
             setActiveGameId(gameId);
             setGameState('maximized');
         } catch (e) {
             console.error('Failed to accept game invite:', e);
         }
-    }, []);
+    }, [currentUser]);
 
     // Perform game move
     const makeMove = useCallback(async (newState, nextTurnUid = null, winnerId = null) => {
         if (!activeGameId || !activeGame) return;
 
         const playersKeys = Object.keys(activeGame.players);
-        const opponentUid = playersKeys.find(uid => uid !== currentUser.uid);
-        const turn = nextTurnUid || opponentUid || currentUser.uid;
+        let turn = nextTurnUid;
+        if (!turn) {
+            if (activeGame.gameType === 'chess') {
+                const opponentUid = playersKeys.find(uid => uid !== currentUser.uid);
+                turn = opponentUid || currentUser.uid;
+            } else {
+                turn = getNextTurnUid(activeGame.players, currentUser.uid);
+            }
+        }
 
         const payload = {
             type: 'move',
@@ -301,9 +386,26 @@ function initLudoBoard() {
 }
 
 function initLudoPieces() {
-    // 4 tokens per player
+    // 4 tokens per player for all 4 colors
     return {
         red: [ { pos: 'home', step: -1 }, { pos: 'home', step: -1 }, { pos: 'home', step: -1 }, { pos: 'home', step: -1 } ],
+        green: [ { pos: 'home', step: -1 }, { pos: 'home', step: -1 }, { pos: 'home', step: -1 }, { pos: 'home', step: -1 } ],
+        yellow: [ { pos: 'home', step: -1 }, { pos: 'home', step: -1 }, { pos: 'home', step: -1 }, { pos: 'home', step: -1 } ],
         blue: [ { pos: 'home', step: -1 }, { pos: 'home', step: -1 }, { pos: 'home', step: -1 }, { pos: 'home', step: -1 } ]
     };
+}
+
+function getNextTurnUid(players, currentUid) {
+    const colorOrder = ['red', 'green', 'yellow', 'blue'];
+    const activePlayers = Object.entries(players).map(([uid, p]) => ({
+        uid,
+        color: p.color
+    }));
+    activePlayers.sort((a, b) => colorOrder.indexOf(a.color) - colorOrder.indexOf(b.color));
+    const currentIndex = activePlayers.findIndex(p => p.uid === currentUid);
+    if (currentIndex === -1) {
+        return activePlayers[0]?.uid || currentUid;
+    }
+    const nextIndex = (currentIndex + 1) % activePlayers.length;
+    return activePlayers[nextIndex].uid;
 }

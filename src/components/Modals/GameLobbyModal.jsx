@@ -7,6 +7,8 @@ export default function GameLobbyModal({ onClose, groupMembers, chatInfo, chatId
     const { sendGameInvite } = useGame();
     const [selectedGame, setSelectedGame] = useState('chess'); // 'chess' | 'ludo'
     const [selectedOpponent, setSelectedOpponent] = useState(null);
+    const [playerCount, setPlayerCount] = useState(2); // 2 | 3 | 4
+    const [selectedOpponents, setSelectedOpponents] = useState([]); // Array of opponent objects
     const [isSending, setIsSending] = useState(false);
 
     // Resolve possible opponents:
@@ -27,20 +29,26 @@ export default function GameLobbyModal({ onClose, groupMembers, chatInfo, chatId
     }
 
     const handleSendInvite = async () => {
-        if (!selectedOpponent && opponents.length > 1) {
-            alert('Please select an opponent to play!');
-            return;
-        }
+        let opponentsToInvite = [];
 
-        const opponentUser = selectedOpponent || opponents[0];
-        if (!opponentUser) {
-            alert('No opponent available in this chat!');
-            return;
+        if (selectedGame === 'ludo' && playerCount > 2) {
+            if (selectedOpponents.length !== playerCount - 1) {
+                alert(`Please select exactly ${playerCount - 1} opponents to play!`);
+                return;
+            }
+            opponentsToInvite = selectedOpponents;
+        } else {
+            const opponentUser = selectedOpponent || (opponents.length === 1 ? opponents[0] : null);
+            if (!opponentUser) {
+                alert('Please select an opponent to play!');
+                return;
+            }
+            opponentsToInvite = [opponentUser];
         }
 
         setIsSending(true);
         try {
-            await sendGameInvite(chatId, selectedGame, opponentUser);
+            await sendGameInvite(chatId, selectedGame, opponentsToInvite);
             onClose();
         } catch (e) {
             console.error('Invite failed:', e);
@@ -60,7 +68,12 @@ export default function GameLobbyModal({ onClose, groupMembers, chatInfo, chatId
                 {/* Game Selection */}
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
                     <div
-                        onClick={() => setSelectedGame('chess')}
+                        onClick={() => {
+                            setSelectedGame('chess');
+                            setPlayerCount(2);
+                            setSelectedOpponents([]);
+                            setSelectedOpponent(null);
+                        }}
                         style={{
                             flex: 1,
                             padding: '1.25rem 1rem',
@@ -78,7 +91,12 @@ export default function GameLobbyModal({ onClose, groupMembers, chatInfo, chatId
                     </div>
 
                     <div
-                        onClick={() => setSelectedGame('ludo')}
+                        onClick={() => {
+                            setSelectedGame('ludo');
+                            setPlayerCount(2);
+                            setSelectedOpponents([]);
+                            setSelectedOpponent(null);
+                        }}
                         style={{
                             flex: 1,
                             padding: '1.25rem 1rem',
@@ -92,12 +110,116 @@ export default function GameLobbyModal({ onClose, groupMembers, chatInfo, chatId
                     >
                         <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.5rem' }}>🎲</span>
                         <strong style={{ color: 'var(--app-text, #f8fafc)', display: 'block', fontSize: '1rem' }}>Ludo</strong>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--gray, #94a3b8)', display: 'block', marginTop: '0.25rem' }}>1v1 Local path-run (2 Colors)</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--gray, #94a3b8)', display: 'block', marginTop: '0.25rem' }}>Multiplayer Ludo</span>
                     </div>
                 </div>
 
-                {/* Opponent Selection (Only shown if more than 1 opponent, otherwise auto-selects) */}
-                {opponents.length > 1 ? (
+                {/* Player Count Selection (Only for Ludo in group chats) */}
+                {selectedGame === 'ludo' && opponents.length > 1 && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ display: 'block', color: 'var(--gray, #94a3b8)', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 600 }}>
+                            Number of Players:
+                        </label>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            {[2, 3, 4].map(count => {
+                                const isDisabled = opponents.length < (count - 1);
+                                return (
+                                    <button
+                                        key={count}
+                                        onClick={() => {
+                                            setPlayerCount(count);
+                                            setSelectedOpponents([]);
+                                            setSelectedOpponent(null);
+                                        }}
+                                        disabled={isDisabled}
+                                        style={{
+                                            flex: 1,
+                                            padding: '0.5rem',
+                                            borderRadius: '8px',
+                                            border: `1px solid ${playerCount === count ? '#6366f1' : 'rgba(255,255,255,0.1)'}`,
+                                            background: playerCount === count ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255,255,255,0.03)',
+                                            color: isDisabled ? '#475569' : 'var(--app-text, #f8fafc)',
+                                            cursor: isDisabled ? 'not-allowed' : 'pointer',
+                                            fontWeight: 600,
+                                            fontSize: '0.9rem',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        {count} Players
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Opponent Selection */}
+                {selectedGame === 'ludo' && playerCount > 2 ? (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ display: 'block', color: 'var(--gray, #94a3b8)', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 600 }}>
+                            Select {playerCount - 1} Opponents:
+                        </label>
+                        <div style={{
+                            maxHeight: '180px',
+                            overflowY: 'auto',
+                            background: 'rgba(255,255,255,0.02)',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            padding: '0.5rem'
+                        }}>
+                            {opponents.map(opp => {
+                                const isChecked = selectedOpponents.some(o => o.uid === opp.uid);
+                                return (
+                                    <label
+                                        key={opp.uid}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.75rem',
+                                            padding: '0.5rem',
+                                            cursor: 'pointer',
+                                            borderRadius: '6px',
+                                            background: isChecked ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                                            marginBottom: '4px',
+                                            transition: 'background 0.2s'
+                                        }}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    if (selectedOpponents.length >= playerCount - 1) {
+                                                        alert(`You can only select ${playerCount - 1} opponents for a ${playerCount}-player game.`);
+                                                        return;
+                                                    }
+                                                    setSelectedOpponents([...selectedOpponents, opp]);
+                                                } else {
+                                                    setSelectedOpponents(selectedOpponents.filter(o => o.uid !== opp.uid));
+                                                }
+                                            }}
+                                            style={{
+                                                accentColor: '#6366f1',
+                                                width: '16px',
+                                                height: '16px',
+                                                cursor: 'pointer'
+                                            }}
+                                        />
+                                        <img
+                                            src={opp.photo || `https://ui-avatars.com/api/?name=${opp.name}`}
+                                            alt=""
+                                            style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
+                                        />
+                                        <span style={{ color: 'var(--app-text, #f8fafc)', fontSize: '0.9rem' }}>{opp.name}</span>
+                                    </label>
+                                );
+                            })}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--gray, #94a3b8)', marginTop: '0.25rem', textAlign: 'right' }}>
+                            Selected: {selectedOpponents.length} / {playerCount - 1}
+                        </div>
+                    </div>
+                ) : opponents.length > 1 ? (
                     <div style={{ marginBottom: '1.5rem' }}>
                         <label style={{ display: 'block', color: 'var(--gray, #94a3b8)', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 600 }}>
                             Choose Opponent:

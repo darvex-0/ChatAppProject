@@ -4,6 +4,24 @@
 # Project Changelog
 
 
+## Version 3.5 - Multi-Player Ludo & Lobby Expansion 🎲👥
+**Date:** 1st June 2026
+
+**New Features:**
+- **Multi-Player Ludo Modes**: Expanded Ludo to support 2-player, 3-player, and 4-player game options in group chats.
+- **Lobby Opponent Selection**: Host can choose the number of players (2, 3, or 4) in the game lobby. For 3 and 4-player games, an interactive checklist is rendered to select exactly `playerCount - 1` opponents.
+- **Clockwise Turn Order**: Turn rotation now cycles clockwise through active player slots: Red (Host, top-left) -> Green (top-right) -> Yellow (bottom-right) -> Blue (bottom-left).
+- **Ludo Board Structural Overhaul**: Updated board base regions and path exit/start highlights dynamically for all 4 sectors.
+- **Dynamic Capturing**: Capture check evaluates all other active colors, sending landing tokens back to their respective base grids.
+
+**Bug Fixes & Refinements:**
+- **Robust Multi-Player Sync**: Restructured state synchronization to bypass WebRTC connections for 3+ player games, relying 100% on real-time Firestore database synchronization to ensure scalability.
+- **Lobby Invitation Gates**: Prevents gameplay actions (rolling dice, moving pieces) until all invited opponents accept the invitation and the game status transitions to active.
+- **Legacy 1v1 Compatibility**: Preserved Red vs Blue 1v1 board positions (with Blue at bottom-right yellow positions) and legacy game record schemas for backward compatibility.
+
+---
+
+
 ## Version 3.4 - Real-Time Multiplayer Games & Security Overhaul 🎮♟️
 **Date:** 28th May 2026
 

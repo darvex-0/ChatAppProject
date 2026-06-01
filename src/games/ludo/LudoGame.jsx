@@ -18,14 +18,58 @@ const TRACK_COORDS = [
     { r: 7, c: 0 } // 50
 ];
 
-// Home stretches (5 cells each) and central target (7, 7)
-const HOME_STRETCH_COORDS = {
-    red: [
-        { r: 7, c: 1 }, { r: 7, c: 2 }, { r: 7, c: 3 }, { r: 7, c: 4 }, { r: 7, c: 5 }
-    ],
-    blue: [
-        { r: 7, c: 13 }, { r: 7, c: 12 }, { r: 7, c: 11 }, { r: 7, c: 10 }, { r: 7, c: 9 }
-    ]
+const getStartStep = (color, numPlayers) => {
+    if (color === 'red') return 0;
+    if (color === 'green') return 13;
+    if (color === 'yellow') return 26;
+    if (color === 'blue') {
+        return numPlayers === 2 ? 26 : 39;
+    }
+    return 0;
+};
+
+const getHomeStretchCoords = (color, numPlayers) => {
+    if (color === 'red') {
+        return [
+            { r: 7, c: 1 }, { r: 7, c: 2 }, { r: 7, c: 3 }, { r: 7, c: 4 }, { r: 7, c: 5 }
+        ];
+    }
+    if (color === 'green') {
+        return [
+            { r: 1, c: 7 }, { r: 2, c: 7 }, { r: 3, c: 7 }, { r: 4, c: 7 }, { r: 5, c: 7 }
+        ];
+    }
+    if (color === 'yellow') {
+        return [
+            { r: 7, c: 13 }, { r: 7, c: 12 }, { r: 7, c: 11 }, { r: 7, c: 10 }, { r: 7, c: 9 }
+        ];
+    }
+    if (color === 'blue') {
+        if (numPlayers === 2) {
+            return [
+                { r: 7, c: 13 }, { r: 7, c: 12 }, { r: 7, c: 11 }, { r: 7, c: 10 }, { r: 7, c: 9 }
+            ];
+        }
+        return [
+            { r: 13, c: 7 }, { r: 12, c: 7 }, { r: 11, c: 7 }, { r: 10, c: 7 }, { r: 9, c: 7 }
+        ];
+    }
+    return [];
+};
+
+const getNextTurnUid = (players, currentUid) => {
+    const colorOrder = ['red', 'green', 'yellow', 'blue'];
+    const activePlayers = Object.entries(players).map(([uid, p]) => ({
+        uid,
+        color: p.color
+    }));
+    activePlayers.sort((a, b) => colorOrder.indexOf(a.color) - colorOrder.indexOf(b.color));
+    const currentIndex = activePlayers.findIndex(p => p.uid === currentUid);
+    if (currentIndex === -1) {
+        return activePlayers[0]?.uid || currentUid;
+    }
+    const nextIndex = (currentIndex + 1) % activePlayers.length;
+    return activePlayers[nextIndex].uid;
 };
 
 // Safe spot indices where tokens cannot be captured
@@ -46,12 +90,18 @@ export default function LudoGame() {
     const winnerId = activeGame?.winnerId;
 
     const isPlayer = currentUser && Object.keys(players).includes(currentUser.uid);
-    const playerColor = isPlayer ? players[currentUser.uid].color : 'spectator'; // 'red' | 'blue'
+    const playerColor = isPlayer ? players[currentUser.uid].color : 'spectator'; // 'red' | 'green' | 'yellow' | 'blue'
     const isMyTurn = isPlayer && currentUser.uid === turnUid;
+
+    const numPlayers = Object.keys(players).length || 2;
+    const activeColors = Object.values(players).map(p => p.color);
+    const isColorActive = (color) => activeColors.includes(color);
 
     const gameState = activeGame?.state || {
         pieces: {
             red: [ { pos: 'home', step: -1 }, { pos: 'home', step: -1 }, { pos: 'home', step: -1 }, { pos: 'home', step: -1 } ],
+            green: [ { pos: 'home', step: -1 }, { pos: 'home', step: -1 }, { pos: 'home', step: -1 }, { pos: 'home', step: -1 } ],
+            yellow: [ { pos: 'home', step: -1 }, { pos: 'home', step: -1 }, { pos: 'home', step: -1 }, { pos: 'home', step: -1 } ],
             blue: [ { pos: 'home', step: -1 }, { pos: 'home', step: -1 }, { pos: 'home', step: -1 }, { pos: 'home', step: -1 } ]
         },
         diceValue: 0,
@@ -113,12 +163,12 @@ export default function LudoGame() {
             const hasMoves = checkHasMoves(nextState.pieces[playerColor], value);
             if (!hasMoves) {
                 setTimeout(() => {
-                    const opponentUid = Object.keys(players).find(uid => uid !== currentUser.uid);
+                    const nextTurnUid = getNextTurnUid(players, currentUser.uid);
                     makeMove({
                         ...nextState,
                         diceRolled: false,
                         diceValue: 0
-                    }, opponentUid);
+                    }, nextTurnUid);
                 }, 1500);
             } else {
                 makeMove(nextState, currentUser.uid);
@@ -139,7 +189,7 @@ export default function LudoGame() {
 
     // Move Piece handler
     const movePiece = (pieceIdx) => {
-        if (!isPlayer || !isMyTurn || !gameState.diceRolled) return;
+        if (!isPlayer || !isMyTurn || !gameState.diceRolled || gameStatus !== 'active') return;
 
         const dice = gameState.diceValue;
         const pieces = [...gameState.pieces[playerColor]];
@@ -148,10 +198,9 @@ export default function LudoGame() {
         if (piece.pos === 'home') {
             if (dice !== 6) return;
             piece.pos = 'track';
-            piece.step = playerColor === 'red' ? 0 : 26; // Red starts at 0, Blue at 26
+            piece.step = getStartStep(playerColor, numPlayers);
         } else if (piece.pos === 'track') {
-            const startStep = playerColor === 'red' ? 0 : 26;
-            const endStep = playerColor === 'red' ? 50 : 24;
+            const startStep = getStartStep(playerColor, numPlayers);
 
             const relativeStep = (piece.step - startStep + 52) % 52;
             const nextRelative = relativeStep + dice;
@@ -180,22 +229,28 @@ export default function LudoGame() {
 
         // Check capturing
         const nextPieces = { ...gameState.pieces, [playerColor]: pieces };
-        const opponentColor = playerColor === 'red' ? 'blue' : 'red';
-        const opponentPieces = [...gameState.pieces[opponentColor]];
         let captured = false;
 
         if (piece.pos === 'track' && !SAFE_SPOTS.includes(piece.step)) {
-            opponentPieces.forEach((op, opIdx) => {
-                if (op.pos === 'track' && op.step === piece.step) {
-                    opponentPieces[opIdx] = { pos: 'home', step: -1 };
-                    captured = true;
+            Object.keys(nextPieces).forEach((color) => {
+                if (color === playerColor) return;
+                const otherPieces = [...(nextPieces[color] || [])];
+                let otherCaptured = false;
+                otherPieces.forEach((op, opIdx) => {
+                    if (op.pos === 'track' && op.step === piece.step) {
+                        otherPieces[opIdx] = { pos: 'home', step: -1 };
+                        otherCaptured = true;
+                        captured = true;
+                    }
+                });
+                if (otherCaptured) {
+                    nextPieces[color] = otherPieces;
                 }
             });
         }
 
         if (captured) {
             playSound('capture');
-            nextPieces[opponentColor] = opponentPieces;
         }
 
         // Check Win Condition
@@ -213,38 +268,40 @@ export default function LudoGame() {
             playSound('win');
             makeMove(nextState, null, nextWinnerId);
         } else {
-            const opponentUid = Object.keys(players).find(uid => uid !== currentUser.uid);
+            const nextTurnUid = getNextTurnUid(players, currentUser.uid);
             // If rolled a 6 or captured a piece, player gets another turn!
             const keepTurn = (dice === 6 || captured);
-            makeMove(nextState, keepTurn ? currentUser.uid : opponentUid);
+            makeMove(nextState, keepTurn ? currentUser.uid : nextTurnUid);
         }
     };
 
     // Calculate absolute position on the grid
     const getPieceGridPos = (color, p, idx) => {
         if (p.pos === 'home') {
-            // Layout red (top-left) and blue (bottom-right) home pieces in grids
             if (color === 'red') {
-                const offsets = [ { r: 2, c: 2 }, { r: 2, c: 3 }, { r: 3, c: 2 }, { r: 3, c: 3 } ];
-                return offsets[idx];
-            } else {
-                const offsets = [ { r: 11, c: 11 }, { r: 11, c: 12 }, { r: 12, c: 11 }, { r: 12, c: 12 } ];
-                return offsets[idx];
+                return [ { r: 2, c: 2 }, { r: 2, c: 3 }, { r: 3, c: 2 }, { r: 3, c: 3 } ][idx];
+            } else if (color === 'green') {
+                return [ { r: 2, c: 11 }, { r: 2, c: 12 }, { r: 3, c: 11 }, { r: 3, c: 12 } ][idx];
+            } else if (color === 'yellow') {
+                return [ { r: 11, c: 11 }, { r: 11, c: 12 }, { r: 12, c: 11 }, { r: 12, c: 12 } ][idx];
+            } else if (color === 'blue') {
+                if (numPlayers === 2) {
+                    return [ { r: 11, c: 11 }, { r: 11, c: 12 }, { r: 12, c: 11 }, { r: 12, c: 12 } ][idx];
+                }
+                return [ { r: 11, c: 2 }, { r: 11, c: 3 }, { r: 12, c: 2 }, { r: 12, c: 3 } ][idx];
             }
         } else if (p.pos === 'track') {
             return TRACK_COORDS[p.step];
         } else if (p.pos === 'stretch') {
-            return HOME_STRETCH_COORDS[color][p.step];
+            return getHomeStretchCoords(color, numPlayers)[p.step];
         } else {
             // goal position (center)
             return { r: 7, c: 7 };
         }
     };
 
-    const opponentInfo = useMemo(() => {
-        const opponentId = Object.keys(players).find(uid => uid !== currentUser?.uid);
-        return opponentId ? players[opponentId] : null;
-    }, [players, currentUser]);
+    const currentTurnPlayer = players[turnUid];
+    const currentTurnColor = currentTurnPlayer?.color || 'red';
 
     return (
         <div style={{
@@ -313,15 +370,43 @@ export default function LudoGame() {
                     {/* Render bases */}
                     {/* Red base (top-left) */}
                     <div style={{ gridArea: '1 / 1 / 7 / 7', background: 'linear-gradient(135deg, #f87171, #ef4444)', border: '1px solid #dc2626' }} />
-                    {/* Blue base (bottom-right) */}
-                    <div style={{ gridArea: '10 / 10 / 16 / 16', background: 'linear-gradient(135deg, #60a5fa, #3b82f6)', border: '1px solid #2563eb' }} />
-                    {/* White home base overlays */}
                     <div style={{ gridArea: '2 / 2 / 6 / 6', background: 'rgba(255,255,255,0.75)', borderRadius: '8px' }} />
-                    <div style={{ gridArea: '11 / 11 / 15 / 15', background: 'rgba(255,255,255,0.75)', borderRadius: '8px' }} />
 
-                    {/* Empty bases (Green & Yellow unused for 1v1) */}
-                    <div style={{ gridArea: '1 / 10 / 7 / 16', background: '#94a3b8', opacity: 0.15, border: '1px solid #475569' }} />
-                    <div style={{ gridArea: '10 / 1 / 16 / 7', background: '#94a3b8', opacity: 0.15, border: '1px solid #475569' }} />
+                    {/* Green base (top-right) */}
+                    {isColorActive('green') ? (
+                        <>
+                            <div style={{ gridArea: '1 / 10 / 7 / 16', background: 'linear-gradient(135deg, #4ade80, #22c55e)', border: '1px solid #16a34a' }} />
+                            <div style={{ gridArea: '2 / 11 / 6 / 15', background: 'rgba(255,255,255,0.75)', borderRadius: '8px' }} />
+                        </>
+                    ) : (
+                        <div style={{ gridArea: '1 / 10 / 7 / 16', background: '#94a3b8', opacity: 0.15, border: '1px solid #475569' }} />
+                    )}
+
+                    {/* Yellow (or 2p Blue) base (bottom-right) */}
+                    {isColorActive('yellow') || (isColorActive('blue') && numPlayers === 2) ? (
+                        <>
+                            <div style={{
+                                gridArea: '10 / 10 / 16 / 16',
+                                background: isColorActive('yellow')
+                                    ? 'linear-gradient(135deg, #fde047, #eab308)'
+                                    : 'linear-gradient(135deg, #60a5fa, #3b82f6)',
+                                border: `1px solid ${isColorActive('yellow') ? '#ca8a04' : '#2563eb'}`
+                            }} />
+                            <div style={{ gridArea: '11 / 11 / 15 / 15', background: 'rgba(255,255,255,0.75)', borderRadius: '8px' }} />
+                        </>
+                    ) : (
+                        <div style={{ gridArea: '10 / 10 / 16 / 16', background: '#94a3b8', opacity: 0.15, border: '1px solid #475569' }} />
+                    )}
+
+                    {/* Blue (4p) base (bottom-left) */}
+                    {isColorActive('blue') && numPlayers > 2 ? (
+                        <>
+                            <div style={{ gridArea: '10 / 1 / 16 / 7', background: 'linear-gradient(135deg, #60a5fa, #3b82f6)', border: '1px solid #2563eb' }} />
+                            <div style={{ gridArea: '11 / 2 / 15 / 6', background: 'rgba(255,255,255,0.75)', borderRadius: '8px' }} />
+                        </>
+                    ) : (
+                        <div style={{ gridArea: '10 / 1 / 16 / 7', background: '#94a3b8', opacity: 0.15, border: '1px solid #475569' }} />
+                    )}
 
                     {/* Central Target Triangle (7,7) */}
                     <div style={{
@@ -358,10 +443,24 @@ export default function LudoGame() {
                                 cellBg = '#ef4444'; // Red starting point
                             }
 
-                            // Blue home stretch and start spot
+                            // Green home stretch and start spot
+                            if (c === 7 && r >= 1 && r <= 5) {
+                                cellBg = '#86efac'; // Green stretch
+                            } else if (r === 1 && c === 8) {
+                                cellBg = '#22c55e'; // Green starting point
+                            }
+
+                            // Yellow (or 2p Blue) home stretch and start spot
                             if (r === 7 && c >= 9 && c <= 13) {
-                                cellBg = '#93c5fd'; // Blue stretch
+                                cellBg = (numPlayers === 2) ? '#93c5fd' : '#fef08a'; // Blue or Yellow stretch
                             } else if (r === 8 && c === 13) {
+                                cellBg = (numPlayers === 2) ? '#3b82f6' : '#eab308'; // Blue or Yellow starting point
+                            }
+
+                            // Blue (4p) home stretch and start spot
+                            if (c === 7 && r >= 9 && r <= 13) {
+                                cellBg = '#93c5fd'; // Blue stretch
+                            } else if (r === 13 && c === 6) {
                                 cellBg = '#3b82f6'; // Blue starting point
                             }
 
@@ -383,8 +482,15 @@ export default function LudoGame() {
 
                 {/* Render Token pieces with CSS Glide transitions */}
                 {Object.keys(gameState.pieces).map((color) => {
-                    const fill = color === 'red' ? '#ef4444' : '#3b82f6';
-                    const glow = color === 'red' ? '0 0 10px #f87171' : '0 0 10px #60a5fa';
+                    if (!isColorActive(color)) return null;
+
+                    const fill = color === 'red' ? '#ef4444' :
+                                 color === 'green' ? '#22c55e' :
+                                 color === 'yellow' ? '#eab308' : '#3b82f6';
+
+                    const glow = color === 'red' ? '0 0 10px #f87171' :
+                                 color === 'green' ? '0 0 10px #86efac' :
+                                 color === 'yellow' ? '0 0 10px #fef08a' : '0 0 10px #60a5fa';
 
                     return gameState.pieces[color].map((p, idx) => {
                         const cell = getPieceGridPos(color, p, idx);
@@ -395,7 +501,7 @@ export default function LudoGame() {
                             (p.pos === 'home' && gameState.diceValue === 6) ||
                             (p.pos === 'track') ||
                             (p.pos === 'stretch' && p.step + gameState.diceValue <= 5)
-                        ) && gameState.diceRolled;
+                        ) && gameState.diceRolled && gameStatus === 'active';
 
                         return (
                             <div
@@ -447,20 +553,20 @@ export default function LudoGame() {
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', padding: '0.25rem' }}>
                         <button
                             onClick={rollDice}
-                            disabled={!isMyTurn || gameState.diceRolled || isRolling}
+                            disabled={!isMyTurn || gameState.diceRolled || isRolling || gameStatus !== 'active'}
                             style={{
                                 width: '56px',
                                 height: '56px',
                                 borderRadius: '10px',
-                                background: isMyTurn && !gameState.diceRolled ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'rgba(255,255,255,0.05)',
+                                background: isMyTurn && !gameState.diceRolled && gameStatus === 'active' ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'rgba(255,255,255,0.05)',
                                 color: 'white',
                                 border: 'none',
-                                cursor: (isMyTurn && !gameState.diceRolled && !isRolling) ? 'pointer' : 'not-allowed',
+                                cursor: (isMyTurn && !gameState.diceRolled && !isRolling && gameStatus === 'active') ? 'pointer' : 'not-allowed',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontSize: '1.75rem',
-                                boxShadow: (isMyTurn && !gameState.diceRolled) ? '0 0 12px rgba(99, 102, 241, 0.4)' : 'none',
+                                boxShadow: (isMyTurn && !gameState.diceRolled && gameStatus === 'active') ? '0 0 12px rgba(99, 102, 241, 0.4)' : 'none',
                                 transition: 'all 0.2s',
                                 animation: isRolling ? 'spin 0.2s linear infinite' : 'none'
                             }}
@@ -475,7 +581,7 @@ export default function LudoGame() {
                             )}
                         </button>
                         <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
-                            {isMyTurn ? (gameState.diceRolled ? 'Move token' : 'Roll!') : 'Waiting...'}
+                            {gameStatus === 'active' ? (isMyTurn ? (gameState.diceRolled ? 'Move token' : 'Roll!') : 'Waiting...') : 'Waiting...'}
                         </span>
                     </div>
 
@@ -485,13 +591,13 @@ export default function LudoGame() {
                                 isMyTurn ? (
                                     <span style={{ color: '#818cf8' }}>Your Turn ({playerColor.toUpperCase()})</span>
                                 ) : (
-                                    <span>Opponent's Turn ({opponentInfo?.color?.toUpperCase()})</span>
+                                    <span>{currentTurnPlayer?.name || 'Opponent'}'s Turn ({currentTurnColor.toUpperCase()})</span>
                                 )
                             ) : gameStatus === 'finished' ? (
                                 winnerId === currentUser?.uid ? (
                                     <span style={{ color: '#22c55e' }}>You Won! 🏆</span>
                                 ) : (
-                                    <span style={{ color: '#ef4444' }}>Winner: {opponentInfo?.name || 'Opponent'}</span>
+                                    <span style={{ color: '#ef4444' }}>Winner: {players[winnerId]?.name || 'Opponent'}</span>
                                 )
                             ) : 'Waiting to start...'}
                         </div>
@@ -499,6 +605,7 @@ export default function LudoGame() {
                             {gameStatus === 'active' && (
                                 gameState.diceRolled ? `Rolled a ${gameState.diceValue}. Select piece ${playerColor} to move.` : 'Roll the dice to start your turn.'
                             )}
+                            {gameStatus === 'waiting' && 'Lobby waiting for all invitees to join.'}
                         </div>
                     </div>
 
