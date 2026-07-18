@@ -2,53 +2,60 @@
 importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
 
+// Parse Firebase config from the query string parameters passed during registration
+const urlParams = new URLSearchParams(self.location.search);
 const firebaseConfig = {
-    apiKey: "AIzaSyC0N-K5E7pfOs1wPYuSVIZ3bvUzSNA4qcY",
-    authDomain: "chatapp-f20ea.firebaseapp.com",
-    projectId: "chatapp-f20ea",
-    storageBucket: "chatapp-f20ea.firebasestorage.app",
-    databaseURL: "https://chatapp-f20ea-default-rtdb.firebaseio.com",
-    messagingSenderId: "853734238442",
-    appId: "1:853734238442:web:4f06be4ba7fd55419fcf93"
+    apiKey: urlParams.get('apiKey'),
+    authDomain: urlParams.get('authDomain'),
+    projectId: urlParams.get('projectId'),
+    storageBucket: urlParams.get('storageBucket'),
+    databaseURL: urlParams.get('databaseURL'),
+    messagingSenderId: urlParams.get('messagingSenderId'),
+    appId: urlParams.get('appId')
 };
 
-firebase.initializeApp(firebaseConfig);
+// Initialize Firebase only if config parameters are present
+if (firebaseConfig.apiKey) {
+    firebase.initializeApp(firebaseConfig);
+    const messaging = firebase.messaging();
 
-const messaging = firebase.messaging();
+    messaging.onBackgroundMessage(function (payload) {
+        console.log('[firebase-messaging-sw.js] Received background message ', payload);
 
-messaging.onBackgroundMessage(function (payload) {
-    console.log('[firebase-messaging-sw.js] Received background message ', payload);
+        // Check if this is an incoming call data message (from onCallCreated Cloud Function)
+        if (payload.data && payload.data.type === 'INCOMING_CALL') {
+            const callerName = payload.data.callerName || 'Someone';
+            const callType = payload.data.callType || 'audio';
+            const icon = callType === 'video' ? '📹' : '📞';
 
-    // Check if this is an incoming call data message (from onCallCreated Cloud Function)
-    if (payload.data && payload.data.type === 'INCOMING_CALL') {
-        const callerName = payload.data.callerName || 'Someone';
-        const callType = payload.data.callType || 'audio';
-        const icon = callType === 'video' ? '📹' : '📞';
+            return self.registration.showNotification(`${icon} Incoming ${callType} call`, {
+                body: `${callerName} is calling...`,
+                icon: '/icon-192.png',
+                tag: 'incoming-call',
+                requireInteraction: true,
+                vibrate: [200, 100, 200, 100, 200, 100, 200],
+                data: payload.data, // Pass call data for click handling
+                actions: [
+                    { action: 'answer', title: '📞 Answer' },
+                    { action: 'decline', title: '❌ Decline' }
+                ]
+            });
+        }
 
-        return self.registration.showNotification(`${icon} Incoming ${callType} call`, {
-            body: `${callerName} is calling...`,
-            icon: '/icon-192.png',
-            tag: 'incoming-call',
-            requireInteraction: true,
-            vibrate: [200, 100, 200, 100, 200, 100, 200],
-            data: payload.data, // Pass call data for click handling
-            actions: [
-                { action: 'answer', title: '📞 Answer' },
-                { action: 'decline', title: '❌ Decline' }
-            ]
-        });
-    }
+        // Regular chat notification (has notification key)
+        if (payload.notification) {
+            const notificationTitle = payload.notification.title;
+            const notificationOptions = {
+                body: payload.notification.body,
+                icon: '/icon-192.png'
+            };
+            self.registration.showNotification(notificationTitle, notificationOptions);
+        }
+    });
+} else {
+    console.warn("[firebase-messaging-sw.js] Service Worker loaded without active Firebase credentials.");
+}
 
-    // Regular chat notification (has notification key)
-    if (payload.notification) {
-        const notificationTitle = payload.notification.title;
-        const notificationOptions = {
-            body: payload.notification.body,
-            icon: '/icon-192.png'
-        };
-        self.registration.showNotification(notificationTitle, notificationOptions);
-    }
-});
 
 // PWA Offline Caching
 const CACHE_NAME = 'connecthub-v1';

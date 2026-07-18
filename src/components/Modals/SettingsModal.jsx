@@ -25,6 +25,67 @@ export default function SettingsModal({ onClose }) {
     const imgRef = useRef(null);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
+    // Local AI Settings State
+    const [localAIEnabled, setLocalAIEnabled] = useState(localStorage.getItem('local_ai_enabled') === 'true');
+    const [customAIBaseUrl, setCustomAIBaseUrl] = useState(localStorage.getItem('custom_ai_base_url') || "");
+    const [testingConnection, setTestingConnection] = useState(false);
+    const [connectionStatus, setConnectionStatus] = useState(""); // "", "success", "failed"
+    const [connectedModel, setConnectedModel] = useState("");
+
+    const testAIConnection = async () => {
+        setTestingConnection(true);
+        setConnectionStatus("");
+        setConnectedModel("");
+
+        let targetUrl = customAIBaseUrl.trim();
+        if (targetUrl.endsWith('/')) {
+            targetUrl = targetUrl.slice(0, -1);
+        }
+
+        // Fallback if empty
+        if (!targetUrl) {
+            targetUrl = import.meta.env.VITE_AI_BASE_URL || 'http://localhost:8000';
+        }
+        if (targetUrl.endsWith('/')) {
+            targetUrl = targetUrl.slice(0, -1);
+        }
+
+        try {
+            const res = await fetch(`${targetUrl}/`, { 
+                signal: AbortSignal.timeout(4000),
+                headers: { 'ngrok-skip-browser-warning': 'true' }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.status === 'ok' && data.engine === 'ConnectHub AI') {
+                    setConnectionStatus("success");
+                    setConnectedModel(data.model || "Local AI");
+                    // Auto-enable if it works!
+                    setLocalAIEnabled(true);
+                    localStorage.setItem('local_ai_enabled', 'true');
+                    if (customAIBaseUrl.trim()) {
+                        localStorage.setItem('custom_ai_base_url', targetUrl);
+                    } else {
+                        localStorage.removeItem('custom_ai_base_url');
+                    }
+                    return;
+                }
+            }
+            setConnectionStatus("failed");
+        } catch (e) {
+            console.error("Local AI check error:", e);
+            setConnectionStatus("failed");
+        } finally {
+            setTestingConnection(false);
+        }
+    };
+
+    const handleToggleLocalAI = () => {
+        const newVal = !localAIEnabled;
+        setLocalAIEnabled(newVal);
+        localStorage.setItem('local_ai_enabled', newVal ? 'true' : 'false');
+    };
+
     // Fetch user data from Firestore on mount
     useEffect(() => {
         const fetchUserData = async () => {
@@ -120,6 +181,18 @@ export default function SettingsModal({ onClose }) {
             await updateProfile(currentUser, {
                 displayName: username
             });
+
+            // Save Local AI Settings
+            localStorage.setItem('local_ai_enabled', localAIEnabled ? 'true' : 'false');
+            if (customAIBaseUrl.trim()) {
+                let targetUrl = customAIBaseUrl.trim();
+                if (targetUrl.endsWith('/')) {
+                    targetUrl = targetUrl.slice(0, -1);
+                }
+                localStorage.setItem('custom_ai_base_url', targetUrl);
+            } else {
+                localStorage.removeItem('custom_ai_base_url');
+            }
 
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 2000);
@@ -289,8 +362,7 @@ export default function SettingsModal({ onClose }) {
                                 }} />
                             </div>
                         </div>
-
-                        {/* Toggle Option: Message Preview */}
+                                             {/* Toggle Option: Message Preview */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ color: 'var(--app-text)', fontSize: '0.9rem' }}>Message Preview</span>
                             <div
@@ -316,7 +388,77 @@ export default function SettingsModal({ onClose }) {
                             </div>
                         </div>
                     </div>
-
+ 
+                    {/* Local AI Settings Section */}
+                    <div style={{ marginBottom: '1.5rem', marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                        <h4 style={{ color: 'var(--gray)', fontSize: '0.9rem', marginBottom: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '1.1rem' }}>🧠</span> Local AI (Ollama)
+                        </h4>
+ 
+                        {/* Toggle Enable Local AI */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <span style={{ color: 'var(--app-text)', fontSize: '0.9rem' }}>Enable Local AI</span>
+                            <div
+                                onClick={handleToggleLocalAI}
+                                style={{
+                                    width: '44px', height: '24px',
+                                    background: localAIEnabled ? '#10b981' : 'rgba(148, 163, 184, 0.3)',
+                                    borderRadius: '99px',
+                                    position: 'relative',
+                                    cursor: 'pointer',
+                                    transition: 'background 0.3s ease'
+                                }}
+                            >
+                                <div style={{
+                                    width: '18px', height: '18px',
+                                    background: 'white',
+                                    borderRadius: '50%',
+                                    position: 'absolute',
+                                    top: '3px',
+                                    left: localAIEnabled ? '23px' : '3px',
+                                    transition: 'left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                                }} />
+                            </div>
+                        </div>
+ 
+                        {/* Custom URL Input & Test Button */}
+                        {localAIEnabled && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                <label style={{ color: 'var(--gray)', fontSize: '0.75rem' }}>Local Backend URL (ngrok URL or localhost)</label>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <input
+                                        value={customAIBaseUrl}
+                                        onChange={(e) => {
+                                            setCustomAIBaseUrl(e.target.value);
+                                            setConnectionStatus("");
+                                        }}
+                                        placeholder="http://localhost:8000"
+                                        className="modal-input"
+                                        style={{ flexGrow: 1, padding: '0.5rem 0.75rem', background: 'var(--input-bg)', color: 'var(--app-text)', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.875rem' }}
+                                    />
+                                    <button
+                                        onClick={testAIConnection}
+                                        disabled={testingConnection}
+                                        className="modal-btn"
+                                        style={{ padding: '0.5rem 0.85rem', background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}
+                                    >
+                                        {testingConnection ? "Testing..." : "Test"}
+                                    </button>
+                                </div>
+                                {connectionStatus === 'success' && (
+                                    <div style={{ color: '#10b981', fontSize: '0.8rem', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                        <span>Connected to {connectedModel} ✅</span>
+                                    </div>
+                                )}
+                                {connectionStatus === 'failed' && (
+                                    <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                        <span>Connection failed ❌</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+ 
                     {/* Buttons */}
                     <button
                         onClick={handleSaveProfile}

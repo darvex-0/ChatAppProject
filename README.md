@@ -1,109 +1,146 @@
-<div align="center">
-  <img src="https://raw.githubusercontent.com/github/explore/80688e429a7d4ef2fca1e82350fe8e3517d3494d/topics/react/react.png" width="100" alt="React Logo" />
-  <h1>ConnectHub 💬</h1>
-  <p>
-    <b>A modern, ultra-responsive real-time chat application.</b><br />
-    Built with React, Vite, Firebase, and Local AI (FastAPI/Ollama).
-  </p>
+# ConnectHub 💬
 
-  <div>
-    <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
-    <img src="https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E" alt="Vite" />
-    <img src="https://img.shields.io/badge/firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=white" alt="Firebase" />
-    <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" />
-  </div>
+**🔗 Live Web Application Demo:** [chatapp-f20ea.web.app](https://chatapp-f20ea.web.app)
 
-  <br />
-  
-  <p>
-    ConnectHub is designed for seamless communication, offering a feature-rich, interactive, and private messaging experience with a beautiful glass-morphism aesthetic.
-  </p>
-</div>
+![React](https://img.shields.io/badge/React-18.x-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-5.x-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-v10-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.x-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![Ollama](https://img.shields.io/badge/Local%20AI-Ollama-000000?style=for-the-badge&logo=ollama&logoColor=white)
+![PWA](https://img.shields.io/badge/PWA-Supported-5A0FC8?style=for-the-badge&logo=progressive-web-apps&logoColor=white)
 
-<hr />
+A real-time chat application built with React, Vite, and Firebase, featuring WebRTC video/audio calling, in-chat multiplayer board games, and an offline-first local AI assistant powered by FastAPI and Ollama.
 
-## ✨ Highlight Experiences
+---
 
-<table width="100%">
-  <tr>
-    <td width="50%">
-      <h3>🤖 Local AI Superpowers</h3>
-      <p>Powered locally by Ollama & FastAPI to ensure complete privacy (with Gemini fallback options).</p>
-      <ul>
-        <li><b>Smart Replies:</b> Context-aware reply suggestions instantly generated based on chat history.</li>
-        <li><b>AI Rephrase:</b> Transform messy drafts into professional, polished messages with one click.</li>
-        <li><b>Chat Summarizer:</b> Instantly recap a heavy conversation with a 3-sentence TL;DR summary.</li>
-        <li><b>@AI Mentions:</b> Drop a direct question to the AI assistant right inside group chats.</li>
-      </ul>
-    </td>
-    <td width="50%">
-      <h3>🎨 Premium UI/UX</h3>
-      <p>A silky smooth user interface pushing the boundaries of web application aesthetics.</p>
-      <ul>
-        <li><b>Fluid Dark/Light Modes:</b> Dynamically adapting theme layouts.</li>
-        <li><b>3D Spline Login:</b> An interactive, glowing EarthGlobe backdrop on the gateway page.</li>
-        <li><b>Glass-morphism:</b> Translucent, blurred overlay modals providing depth and texture.</li>
-        <li><b>Responsive Design:</b> PWA-ready out of the box for Native-app feel on mobile iOS and Android.</li>
-      </ul>
-    </td>
-  </tr>
-</table>
+## 🚀 Key Features
 
-### 💬 Core Engine Capabilities
+### 💬 Messaging Engine
+* **Real-time Sync**: Instant message delivery with optimistic UI updates, online/offline presence states, typing indicators, and read receipts.
+* **Rich Interactions**: Threaded replies, emoji reactions, message forwarding, and a dedicated "Personal Notes" self-chat.
+* **Moderation & Control**: Message editing, deletion (recall for everyone or delete for self), and starred message archives.
+* **Message Pinning**: Pin up to 5 messages per conversation with auto-expiry options (1h, 12h, 1d, 1w).
 
-- 📞 **WebRTC Calling:** High-fidelity 1:1 Video and Audio peer-to-peer calling. Features background wake-lock and Picture-in-Picture (PiP).
-- 📸 **Rich Media & Editing:** Inline crop, trim, and filter overlays for Images and Video before sending.
-- 🎙️ **Voice & Video Notes:** WhatsApp-style draggable recording interfaces and instant circular video bubbles.
-- ⏱️ **Stories (Status):** Ephemeral 24hr vanishing text/media updates with read-receipt views. 
-- 📊 **Advanced Polls:** Media-backed, anonymous, timed, multi-choice opinion polling for groups.
-- 📍 **Interactive Messaging:** Forwarding networks, Emoji picker reactions, Message Pinning, and Starred Archives.
-- ⚡ **Real-Time Synergy:** Millisecond delivery speeds, precise typing indicators, and background FCM push notifications.
+### 🎮 In-Chat Multiplayer Games
+* **Chess & Ludo**: Start and play interactive multiplayer Chess or Ludo games directly inside any chat window.
+* **Real-Time Sync**: Game state updates are synchronized instantly across players using Firebase database nodes.
 
-<hr />
+### 📞 WebRTC Calls
+* **1-on-1 Calling**: High-quality Peer-to-Peer video and audio calls.
+* **Multitasking & Background Support**:
+  * **Picture-in-Picture (PiP)**: Keep your video stream active in a floating window while browsing other parts of the app.
+  * **Background Wake-up**: The PWA service worker wakes up the client to receive call invites even when the application tab is closed.
 
-## ⚡ Architecture & Performance Specs
+### 🤖 Local AI Assistant
+* **Smart Replies**: Contextual suggestions generated based on recent chat history.
+* **AI Rephrase**: Clean up or adjust the tone of message drafts with a single click.
+* **Chat Summarizer**: Condense long conversation histories into a quick 3-sentence summary.
+* **Group Mentions**: Query the assistant directly in group chats using the `@AI` prefix.
+* **Resilient Fallbacks**: If the local AI backend is offline, the app falls back to Google Gemini (via Cloud Functions), and finally to a static pattern-matching engine.
 
-ConnectHub is heavily optimized to gracefully handle immense data payloads and low-end mobile hardware through rigorous React render logic.
+### 📸 Media & Sharing
+* **Image Editor**: Built-in canvas tools to crop, zoom, and apply filters (Vivid, B&W, Sepia, etc.) before sending.
+* **Voice Notes**: Draggable voice recorder with pause/resume, real-time waveform visualization, and swipe-to-cancel.
+* **Video Trimmer & Media Compressor**: Client-side media compression reduces upload sizes before sending, saving storage and bandwidth.
+* **Interactive Polls**: Timed, multi-choice opinion polls for group chats.
 
-*   **React Code Splitting (`React.lazy`)**: The critical rendering path is entirely severed from heavy 3D assets. The initial login sequence bundle requires less than `10KB` of Javascript. Large dependency chunks stream asynchronously.
-*   **60FPS Memoized Reactivity**: Real-time typing states strictly bypass the primary DOM tree. The application employs aggressive `React.memo` wrapping and surgical `useCallback` hook dependency mapping to prevent the heavy virtualized 200+ message list from re-rendering over keyboard input streams.
-*   **Virtualized Dom (`react-virtuoso`)**: Unloads and recycles off-screen DOM nodes automatically, ensuring buttery-smooth native scrolling physics even when navigating chat channels containing upwards of 10,000+ messages.
-*   **Client-Side Media Compression (`browser-image-compression`)**: Aggressively shrinks 4K payloads via browser canvas directly on the client's device *before* initiating network transfers. Massively diminishes cloud egress latency and cuts storage overhead significantly.
+---
 
-<hr />
+## 🛠️ Tech Stack
+* **Frontend**: React, Vite, Tailwind CSS, Framer Motion, React Virtuoso (for list virtualization).
+* **Backend**: Firebase Authentication, Cloud Firestore, Realtime Database, Cloud Storage, Cloud Functions.
+* **AI Gateway**: FastAPI (Python), Ollama (running local LLMs).
 
-## 📦 Developer Quickstart
+---
 
-<details>
-<summary><b>Click to view installation instructions</b></summary>
-<br />
+## 🔒 Configuration & Security
+To keep project credentials secure, all keys are decoupled from the codebase:
+- Environment variables (`.env.local`) hold the Firebase client config and are excluded from version control.
+- The service worker loads configurations dynamically at runtime, ensuring no API keys are hardcoded in static asset files.
 
-### Prerequisites
-*   Node.js (v18+)
-*   npm or yarn
+---
 
-### Setup
+## 🚀 Quickstart
 
+### 1. Setup Environment Variables
+Clone the repository and copy the template configuration file:
 ```bash
-# 1. Clone the repository
 git clone https://github.com/darvex-0/ChatAppProject.git
-cd "ChatApp Project"
+cd ChatAppProject
+cp .env.example .env.local
+```
+Open `.env.local` and fill in your Firebase project credentials.
 
-# 2. Install dependencies
+### 2. Run the Frontend
+```bash
+# Install dependencies
 npm install
 
-# 3. Spin up the development server
+# Run Vite dev server
 npm run dev
 ```
+The application will be available at `http://localhost:5173`.
 
-### Firebase Configuration
-1. Create a project at [console.firebase.google.com](https://console.firebase.google.com)
-2. Enable **Authentication** (Google Provider), **Firestore Database**, and **Storage**.
-3. Overwrite `src/services/firebase.js` with your active initialization strings.
+### 3. Setup the Local AI Backend (Optional)
+Ensure you have [Ollama](https://ollama.com/) installed and running. Pull your preferred local model (e.g., `llama3` or `mistral`):
+```bash
+# Example using Llama 3
+ollama pull llama3
+```
+Clone your companion FastAPI backend ([ConnectHubBackend](https://github.com/darvex-0/ConnectHubBackend)), setup the Python environment, and start the server:
+```bash
+cd ../ConnectHubBackend
 
-</details>
+# Create and activate a virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-<div align="center">
-  <br/>
-  <p>Designed and built with ❤️. Released under the <a href="LICENSE">MIT License</a>.</p>
-</div>
+# Install requirements and run server
+pip install -r requirements.txt
+uvicorn server:app --reload --port 8000
+```
+
+---
+
+## ⚙️ Configuring Local AI in the Web UI
+
+You do not need to modify any code to use or configure the local AI:
+1. Open the application in your browser.
+2. Go to **Settings** (gear icon) -> **AI Settings**.
+3. Toggle **Enable Local AI** to `ON`.
+4. Enter your custom backend URL (default: `http://localhost:8000`).
+5. Click **Test** to verify connection to the running FastAPI backend.
+
+---
+
+## 🌐 Deploying & Setting Up ngrok (Mixed Content Fix)
+
+When you deploy the frontend to a secure domain (e.g., Firebase Hosting at `https://your-app.web.app`), modern browsers block calls to insecure local endpoints (`http://localhost:8000`) due to **Mixed Content (HTTPS -> HTTP)** restrictions. 
+
+To run the local AI backend while using the deployed web app:
+1. Ensure your FastAPI server is running locally on port `8000`.
+2. Expose the port through a secure HTTPS tunnel using [ngrok](https://ngrok.com/):
+   ```bash
+   ngrok http 8000
+   ```
+3. Copy the secure forwarding URL generated by ngrok (looks like `https://xxxx-xx-xx.ngrok-free.app`).
+4. Open the deployed website's **Settings UI** and paste the ngrok HTTPS URL as your custom AI Base URL.
+
+---
+
+## 🛡️ Security Rules Deployment
+Before deploying, make sure your security rules for Firestore, Storage, and Realtime Database are pushed:
+- [firestore.rules](./firestore.rules)
+- [storage.rules](./storage.rules)
+- [database.rules.json](./database.rules.json)
+
+To build the static files and deploy to Firebase Hosting:
+```bash
+npm run build
+firebase deploy
+```
+
+---
+
+## 📝 License
+ConnectHub is open-source software released under the [MIT License](LICENSE).

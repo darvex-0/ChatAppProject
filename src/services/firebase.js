@@ -7,13 +7,13 @@ import { getMessaging } from "firebase/messaging";
 import { getFunctions } from "firebase/functions";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyC0N-K5E7pfOs1wPYuSVIZ3bvUzSNA4qcY",
-    authDomain: "chatapp-f20ea.firebaseapp.com",
-    projectId: "chatapp-f20ea",
-    storageBucket: "chatapp-f20ea.firebasestorage.app",
-    databaseURL: "https://chatapp-f20ea-default-rtdb.firebaseio.com",
-    messagingSenderId: "853734238442",
-    appId: "1:853734238442:web:4f06be4ba7fd55419fcf93"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
@@ -30,8 +30,28 @@ export const cloudFunctions = getFunctions(app);
 
 let messagingInstance = null;
 try {
+    // Dynamically register service worker with configuration parameters to avoid hardcoding secrets
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+        const configParams = new URLSearchParams({
+            apiKey: firebaseConfig.apiKey || "",
+            authDomain: firebaseConfig.authDomain || "",
+            projectId: firebaseConfig.projectId || "",
+            storageBucket: firebaseConfig.storageBucket || "",
+            databaseURL: firebaseConfig.databaseURL || "",
+            messagingSenderId: firebaseConfig.messagingSenderId || "",
+            appId: firebaseConfig.appId || ""
+        }).toString();
+
+        navigator.serviceWorker.register(`/firebase-messaging-sw.js?${configParams}`)
+            .then((registration) => {
+                console.log("FCM Service Worker registered with query params:", registration.scope);
+            })
+            .catch((err) => {
+                console.error("FCM Service Worker registration failed:", err);
+            });
+    }
     messagingInstance = getMessaging(app);
 } catch (error) {
-    console.warn("Firebase Messaging not supported in this environment (likely due to http vs https).");
+    console.warn("Firebase Messaging not supported in this environment (likely due to http vs https or SW registration error).", error);
 }
 export const messaging = messagingInstance;

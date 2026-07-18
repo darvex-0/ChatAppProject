@@ -9,15 +9,30 @@ import { generateSmartReplies as generateStaticReplies } from '../utils/smartRep
  * 3. Static Engine (Regex pattern matching)
  */
 
-const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL || 'http://localhost:8000';
+const getAIBaseUrl = () => {
+    return localStorage.getItem('custom_ai_base_url') || import.meta.env.VITE_AI_BASE_URL || 'http://localhost:8000';
+};
+
+const isLocalAIEnabled = () => {
+    return localStorage.getItem('local_ai_enabled') === 'true';
+};
 
 /**
- * Check if the local AI server is reachable
+ * Check if the local AI server is reachable and running our engine
  */
 export async function isAIServerAvailable() {
+    if (!isLocalAIEnabled()) return false;
     try {
-        const res = await fetch(`${AI_BASE_URL}/`, { signal: AbortSignal.timeout(2000) });
-        return res.ok;
+        const url = getAIBaseUrl();
+        const res = await fetch(`${url}/`, { 
+            signal: AbortSignal.timeout(2000),
+            headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            return data.status === 'ok' && data.engine === 'ConnectHub AI';
+        }
+        return false;
     } catch {
         return false;
     }
@@ -31,21 +46,27 @@ export async function isAIServerAvailable() {
  */
 export async function fetchSmartReplies(messageText, chatContext = []) {
     // Layer 1: Local AI (Zero cost, maximum privacy)
-    try {
-        const res = await fetch(`${AI_BASE_URL}/api/smart-reply`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messageText, chatContext }),
-            signal: AbortSignal.timeout(3000)
-        });
-        if (res.ok) {
-            const data = await res.json();
-            if (data.replies && Array.isArray(data.replies)) {
-                return data.replies;
+    if (isLocalAIEnabled()) {
+        try {
+            const url = getAIBaseUrl();
+            const res = await fetch(`${url}/api/smart-reply`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true'
+                },
+                body: JSON.stringify({ messageText, chatContext }),
+                signal: AbortSignal.timeout(3000)
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.replies && Array.isArray(data.replies)) {
+                    return data.replies;
+                }
             }
+        } catch (e) {
+            console.log("Local AI unavailable, falling back to Gemini...");
         }
-    } catch (e) {
-        console.log("Local AI unavailable, falling back to Gemini...");
     }
 
     // Layer 2: Cloud AI (Gemini via Firebase Cloud Functions)
@@ -70,19 +91,25 @@ export async function fetchSmartReplies(messageText, chatContext = []) {
  */
 export async function fetchRephrase(text) {
     // Try Local AI
-    try {
-        const res = await fetch(`${AI_BASE_URL}/api/rephrase`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text }),
-            signal: AbortSignal.timeout(5000)
-        });
-        if (res.ok) {
-            const data = await res.json();
-            return data.rephrased || null;
+    if (isLocalAIEnabled()) {
+        try {
+            const url = getAIBaseUrl();
+            const res = await fetch(`${url}/api/rephrase`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true'
+                },
+                body: JSON.stringify({ text }),
+                signal: AbortSignal.timeout(5000)
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.rephrased || null;
+            }
+        } catch (e) {
+            console.log("Local Rephrase unavailable, falling back to Gemini...");
         }
-    } catch (e) {
-        console.log("Local Rephrase unavailable, falling back to Gemini...");
     }
 
     // Layer 2: Cloud AI (Gemini via Firebase Cloud Functions)
@@ -106,19 +133,25 @@ export async function fetchRephrase(text) {
  */
 export async function fetchSummary(messages) {
     // Try Local AI
-    try {
-        const res = await fetch(`${AI_BASE_URL}/api/summarize`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages }),
-            signal: AbortSignal.timeout(10000)
-        });
-        if (res.ok) {
-            const data = await res.json();
-            return data.summary || null;
+    if (isLocalAIEnabled()) {
+        try {
+            const url = getAIBaseUrl();
+            const res = await fetch(`${url}/api/summarize`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true'
+                },
+                body: JSON.stringify({ messages }),
+                signal: AbortSignal.timeout(10000)
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.summary || null;
+            }
+        } catch (e) {
+            console.log("Local Summarize unavailable, falling back to Gemini...");
         }
-    } catch (e) {
-        console.log("Local Summarize unavailable, falling back to Gemini...");
     }
 
     // Layer 2: Cloud AI (Gemini via Firebase Cloud Functions)
